@@ -44,6 +44,17 @@
                 width: 80%;
                 aspect-ratio: 1/1;
             }
+
+            .moveCircle{
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                border-radius: 50%;
+                width: 30%;
+                aspect-ratio: 1/1;
+                background-color: rgba(0, 0, 0, 0.75);
+            }
         }
     }
 }

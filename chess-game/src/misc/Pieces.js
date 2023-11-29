@@ -10,6 +10,42 @@ export default class Pieces{
     static White = 8;
     static Black = 16;
 
+    static getColor(piece){
+        return (piece & 24);
+    }
+
+    static isWhite(piece){
+        return (piece & 24) === this.White
+    }
+
+    static isBlack(piece){
+        return (piece & 24) === this.Black
+    }
+
+    static isKing(piece){
+        return (piece & 7) === this.King
+    }
+
+    static isPawn(piece){
+        return (piece & 7) === this.Pawn
+    }
+
+    static isQueen(piece){
+        return (piece & 7) === this.Queen
+    }
+
+    static isRook(piece){
+        return (piece & 7) === this.Rook
+    }
+
+    static isBishop(piece){
+        return (piece & 7) === this.Bishop
+    }
+
+    static isKnight(piece){
+        return (piece & 7) === this.Knight
+    }
+
     static charToImage = new Map([
         ['n', "BlackKnight"],
         ['q', "BlackQueen"],
