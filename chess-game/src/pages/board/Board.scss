@@ -5,26 +5,90 @@
     width: 100vw;
     overflow: hidden;
 
-    .ui{
+    .options{
         position: absolute;
         top: 50%;
         left: 20%;
-        transform: translate(-50%, -50%);
-    
+        transform: translate(-50%, -80%);
+        
         aspect-ratio: 1/1;
         height: 240px;
-        background: red;
+        border-radius: 10px;
+        padding: 1rem;
+        
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        background: rgb(28, 28, 28);
+
+        ol{
+            margin-bottom: .5rem;
+        }
+
+        input{
+            margin-bottom: .5rem;
+            padding: .5rem;
+        }
+
+        .buttons{
+            display: flex;
+            justify-content: space-evenly;
+            align-items: center;
+            width: 100%;
+
+            .btn{
+                cursor: pointer;
+                border: 1px solid white;
+                padding: .25rem 1rem;
+            }
+        }
+
+    }
+    
+    .ui2{
+        position: absolute;
+        top: 50%;
+        left: 20%;
+        transform: translate(-50%, 30%);
+        
+        aspect-ratio: 1/1;
+        height: 240px;
+        background: yellow;
+    }
+
+    #pawnPromotion{
+        position: relative;
+        top: 1rem;
+        left: 1rem;
+
+        .images{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: fit-content;
+
+            img{
+                width: 80px;
+                aspect-ratio: 1/1;
+            }
+        }
     }
 
     .board{
         position: absolute;
         top: 50%;
         left: 70%;
-        transform: translate(-50%, -50%);
-    
+        transform: rotateZ(0deg) translate(-50%, -50%);
+        
         aspect-ratio: 1/1;
         height: 640px;
         background: red;
+        
+        &.rotate{
+            transform: rotateZ(180deg) translate(50%, 50%);
+        }
     
         .square{
             position: absolute;
@@ -34,6 +98,11 @@
             justify-content: center;
             align-items: center;
             cursor: pointer;
+            transform: rotateZ(0deg);
+
+            &.rotate{
+                transform: rotateZ(180deg);
+            }
 
             .label{
                 font-size: 1.5rem;

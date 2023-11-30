@@ -1,14 +1,31 @@
 import { useEffect, useState } from 'react'
 import Pieces from '../../misc/Pieces';
+import General from '../../misc/General';
 import './Board.scss'
 
 const alphabets = "abcdefgh";
+// gameTypes
+// 1 for White vs Computer
+// 2 for Black vs Computer
+// 3 for 2 Player
 
 export default function Board(){
     const [squares, setSquares] = useState([]);
-    const [move, setMove] = useState({
-        turn: 8,
-        from: -1
+    const [legalMoves, setLegalMoves] = useState(Array(64).fill([]));
+    const [boardState, setBoardState] = useState({
+        turn: Pieces.White,
+        from: -1,
+        castling: "kqKQ",
+        enPassant: -1,
+        promoteTo: 'Q'
+    })
+    const [pawnToPromote, setPawnToPromote] = useState({
+        white: 'Q',
+        black: 'q'
+    });
+    const [settings, setSettings] = useState({
+        gameType: -1,
+        rotateBoard: false
     })
 
     useEffect(() => {
@@ -52,11 +69,33 @@ export default function Board(){
         }
 
         setSquares(temp);
-        setMove({
-            turn: 8,
-            from: -1
+        setBoardState({
+            turn: Pieces.White,
+            from: -1,
+            castling: "kqKQ",
+            enPassant: -1,
+            promoteTo: 'Q'
+        });
+        setLegalMoves(Array(64).fill([]));
+        setPawnToPromote({
+            white: 'Q',
+            black: 'q'
         });
     }, [])
+
+    useEffect(() => {
+        let hasMoves = false;
+        legalMoves.forEach(moves => {
+            if(moves.length > 0){
+                hasMoves = true;
+            }
+        });
+
+        if(!hasMoves){
+            if(General.isKingAttacked(boardState.turn)) console.log("Checkmate");
+            else console.log("Stalemate");
+        }
+    }, [legalMoves])
 
     function resetBoard(){
         let temp = [];
@@ -107,7 +146,6 @@ export default function Board(){
                 const index = rank * 8 + file;
                 temp[index].image = Pieces.charToImage.get(curr);
                 temp[index].piece = Pieces.charToNumber.get(curr);
-                console.log(curr, index, temp[index]);
                 file++;
             }else if(numbers.indexOf(curr) !== -1){
                 file += parseInt(curr);
@@ -118,430 +156,284 @@ export default function Board(){
         });
     
         setSquares(temp);
-        setMove({
-            turn: 8,
-            from: -1
+        setBoardState({
+            turn: Pieces.White,
+            from: -1,
+            castling: "kqKQ",
+            enPassant: -1,
+            promoteTo: 'Q'
         });
+        setLegalMoves(General.generateLegalMoves(JSON.parse(JSON.stringify(temp)), JSON.parse(JSON.stringify({
+            turn: Pieces.White,
+            from: -1,
+            castling: "kqKQ",
+            enPassant: -1,
+            promoteTo: 'Q'
+        }))));
+        setPawnToPromote({
+            white: 'Q',
+            black: 'q'
+        });
+        setSettings({
+            gameType: 3,
+            rotateBoard: false
+        })
     }
 
     function movePiece(index, square){
-        console.log(move, Math.floor(index/8) + ", " + index%8 + " : " + square.piece);
+        console.log(boardState, Math.floor(index/8) + ", " + index%8 + " : " + square.piece);
         // cannot move opponents pieces
-        if(square.piece !== Pieces.None && (!Pieces.isSameColor(square.piece, move.turn) && move.from === -1)) return;
+        if(square.piece !== Pieces.None && (!Pieces.isSameColor(square.piece, boardState.turn) && boardState.from === -1)) return;
 
-        if(move.from === -1){
+        if(boardState.from === -1){
             // not selected a piece previously
 
             // square is empty
             if(square.piece === Pieces.None) return;
 
-            setMove(prev => {
+            setBoardState(prev => {
                 prev.from = index;
                 
                 return prev;
             })
             
-            const legalMoves = getLegalMoves(square.piece, index);
+            // const legalMoves = General.generateMoves(square.piece, index, boardState, squares);
             let temp = [...squares]
             for(let i=0; i<64; i++) temp[i].showMoveIcon = false;
 
-            legalMoves.forEach(val => {
-                temp[val].showMoveIcon = true;
+            legalMoves[index].forEach(val => {
+                if(temp[val]) temp[val].showMoveIcon = true;
             })
 
             setSquares(temp);
             
         }else{
-            if((square.piece !== Pieces.None) && Pieces.isSameColor(square.piece, move.turn)){
+            if((square.piece !== Pieces.None) && Pieces.isSameColor(square.piece, boardState.turn)){
                 // if selecting pieces of same color
-                setMove(prev => {
+                setBoardState(prev => {
                     prev.from = index;
                     return prev;
                 })
 
-                const legalMoves = getLegalMoves(square.piece, index);
+                // const legalMoves = General.generateMoves(square.piece, index, boardState, squares);
                 let temp = [...squares]
                 for(let i=0; i<64; i++) temp[i].showMoveIcon = false;
 
-                legalMoves.forEach(val => {
+                legalMoves[index].forEach(val => {
                     temp[val].showMoveIcon = true;
                 })
 
                 setSquares(temp);
             }else{
-                if(square.piece === Pieces.None){
-                    // if the target square is empty
-                    if(!square.showMoveIcon) return;
-                    resetLegalMoves();
+                var legal = false;
+                legalMoves[boardState.from].forEach(target => {
+                    if(target === index) legal = true;
+                })
+                if(!legal) return;
 
-                    let temp = [...squares]
-                    temp[index].piece = temp[move.from].piece;
-                    temp[index].image = temp[move.from].image;
+                let boardStateCopy = JSON.parse(JSON.stringify(boardState));
+                // opposite color or empty circle
+                if(Pieces.isPawn(squares[boardState.from].piece)){
+                    // wait for user to click on an icon
+                    // based on the icnon set the property of boardStateCopy.promoteTo
+                    if(Math.floor(index / 8) === 7){
+                        boardStateCopy.promoteTo = pawnToPromote.white;
+                    }else if(Math.floor(index / 8) === 0){
+                        boardStateCopy.promoteTo = pawnToPromote.black;
+                    }else{
+                        boardStateCopy.promoteTo = 'K';
+                    }
+                }
 
-                    temp[move.from].piece = Pieces.None;
-                    temp[move.from].image = "none";
+                const res = General.makeMove(index, boardStateCopy, JSON.parse(JSON.stringify(squares)));
+                
+                setLegalMoves(General.generateLegalMoves(JSON.parse(JSON.stringify(res.nextSquareState)), JSON.parse(JSON.stringify(res.nextBoardState))));
+                setBoardState(res.nextBoardState);
+                setSquares(res.nextSquareState);
 
-                    setSquares(temp)
+                if(settings.gameType === 3){
+                    let prev = {...settings};
+                    prev.rotateBoard = !prev.rotateBoard;
 
-                    setMove(prev => {
-                        let temp = {...prev}
-                        temp.turn = temp.turn === 16 ? 8 : 16;
-                        temp.from = -1;
-                        return temp;
-                    })
-                }else{
-                    //  if the target square is enemy
-                    if(!square.showMoveIcon) return;
-                    resetLegalMoves();
-
-                    let temp = [...squares]
-                    temp[index].piece = temp[move.from].piece;
-                    temp[index].image = temp[move.from].image;
-
-                    temp[move.from].piece = Pieces.None;
-                    temp[move.from].image = "none";
-
-                    setSquares(temp)
-
-                    setMove(prev => {
-                        let temp = {...prev}
-                        temp.turn = temp.turn === 16 ? 8 : 16;
-                        temp.from = -1;
-                        return temp;
-                    })
+                    setSettings(prev);
                 }
             }
         }
     }
 
-    function resetLegalMoves(){
-        let temp = [...squares]
-        for(let i=0; i<64; i++) temp[i].showMoveIcon = false;
-
-        setSquares(temp);
+    function changePawnToPromote(color, piece){
+        if(color === "white"){
+            setPawnToPromote(prev => {
+                let temp = {...prev};
+                temp.white = piece;
+                return temp;
+            })
+        }else{
+            setPawnToPromote(prev => {
+                let temp = {...prev};
+                temp.black = piece;
+                return temp;
+            })
+        }
     }
 
-    function getLegalMoves(piece, index){
-        let rank = Math.floor(index / 8), file = index % 8;
-        let legalMoves = []
+    function setCustomBoard(){
+        let temp = [];
+        for(let rank=0; rank<8; rank++){
+            for(let file=0; file<8; file++){
+                temp.push({
+                    color: (rank + file) % 2 === 0 ? "#769656" : "#eeeed2",
+                    xOffset: file * 80,
+                    yOffset: rank * 80,
+                    image: "none",
+                    piece: Pieces.None,
+                    showMoveIcon: false,
+                    text: ""
+                })
+            }
+        }
 
-        if(Pieces.isPawn(piece)){
-            console.log(piece, Pieces.Pawn, piece & Pieces.Pawn)
-            // piece is a pawn
-            console.log("pawn")
-            
-            if(Pieces.isWhite(piece)){
-                console.log("White")
-                // piece is white
-                let nextSquare = (rank + 1) * 8 + file;
-                if(squares[nextSquare].piece === Pieces.None) legalMoves.push(nextSquare);
+        for(let file=0; file<8; file++){
+            temp.push({
+                color: "#f7f7f700",
+                xOffset: file * 80,
+                yOffset: -55,
+                image: "none",
+                piece: Pieces.None,
+                showMoveIcon: false,
+                text: alphabets[file]
+            })
+        }
 
-                if(rank === 1){
-                    nextSquare = (rank + 2) * 8 + file;
-                    if(squares[nextSquare].piece === Pieces.None) legalMoves.push(nextSquare);
-                }
+        for(let rank=0; rank<8; rank++){
+            temp.push({
+                color: "#f7f7f700",
+                xOffset: -55,
+                yOffset: rank * 80,
+                image: "none",
+                piece: Pieces.None,
+                showMoveIcon: false,
+                text: (rank + 1).toString()
+            })
+        }
 
-                if(file > 0){
-                    nextSquare = (rank + 1) * 8 + file - 1;
-                    if(Pieces.isBlack(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                }
+        let file = 0, rank = 7;
+        // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        const pieces = "4k3/2ppppp/8/1K1P2q1/8/8/8/1N6 w KQkq - 0 1".split(' ')[0];
+        const text = "rnbqkbnrpRNBQKBNRP", numbers = "0123456789";
 
-                if(file < 7){
-                    nextSquare = (rank + 1) * 8 + file + 1;
-                    if(Pieces.isBlack(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                }
+        pieces.split('').forEach(curr => {
+            if(text.indexOf(curr) !== -1){
+                const index = rank * 8 + file;
+                temp[index].image = Pieces.charToImage.get(curr);
+                temp[index].piece = Pieces.charToNumber.get(curr);
+                file++;
+            }else if(numbers.indexOf(curr) !== -1){
+                file += parseInt(curr);
             }else{
-                // piece is black
-                console.log("Black")
-                let nextSquare = (rank - 1) * 8 + file;
-                if(squares[nextSquare].piece === Pieces.None ||
-                    Pieces.isWhite(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-
-                if(rank === 6){
-                    nextSquare = (rank - 2) * 8 + file;
-                    if(squares[nextSquare].piece === Pieces.None ||
-                        Pieces.isWhite(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                }
-
-                if(file > 0){
-                    nextSquare = (rank - 1) * 8 + file - 1;
-                    if(Pieces.isWhite(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                }
-
-                if(file < 7){
-                    nextSquare = (rank - 1) * 8 + file + 1;
-                    if(Pieces.isWhite(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                }
+                rank--;
+                file = 0;
             }
-        }else if(Pieces.isKnight(piece)){
-            console.log("Knight")
-            // squares to move wrt current square
-            const hor = [1, 2, 2, 1, -1, -2, -2, -1];
-            const ver = [2, 1, -1, -2, -2, -1, 1, 2];
-            let nextSquare = index, nextFile, nextRank;
-
-            for(let i=0; i<8; i++){
-                nextFile = file + hor[i];
-                nextRank = rank + ver[i];
-
-                if(nextFile < 0 || nextFile > 7 || nextRank < 0 || nextRank > 7) continue;
-
-                nextSquare = nextRank * 8 + nextFile;
-
-                if(Pieces.isWhite(piece)){
-                    // for white knight
-                    if(squares[nextSquare].piece === Pieces.None ||
-                        Pieces.isBlack(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                }else{
-                    // for black knight
-                    if(squares[nextSquare].piece === Pieces.None ||
-                        Pieces.isWhite(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                }
-            }
-        }else if(Pieces.isKing(piece)){
-            console.log("King")
-            const hor = [1, -1, 0, 0, 1, 1, -1, -1];
-            const ver = [0, 0, 1, -1, 1, -1, 1, -1];
-
-            let nextSquare = index, nextFile, nextRank;
-
-            for(let i=0; i<8; i++){
-                nextFile = file + hor[i];
-                nextRank = rank + ver[i];
-
-                if(nextFile < 0 || nextFile > 7 || nextRank < 0 || nextRank > 7) continue;
-
-                nextSquare = nextRank * 8 + nextFile;
-
-                if(Pieces.isWhite(piece)){
-                    // for white king
-                    if(squares[nextSquare].piece === Pieces.None ||
-                        Pieces.isBlack(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                }else{
-                    // for black king
-                    if(squares[nextSquare].piece === Pieces.None ||
-                        Pieces.isWhite(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                }
-            }
-        }
-        
-        if(Pieces.isBishop(piece) || Pieces.isQueen(piece)){
-            // for bishop and queen
-            let nextSquare = index;
-
-            // going topleft
-            for(let r = rank + 1, f = file - 1; r < 8 && f > -1; r++, f--){
-                nextSquare = r * 8 + f;
-
-                if(Pieces.isWhite(piece)){
-                    // for white bishop
-                    if(squares[nextSquare].piece === Pieces.None ||
-                        Pieces.isBlack(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                    else break;
-
-                    if(Pieces.isBlack(squares[nextSquare].piece)) break;
-                }else{
-                    // for black bishop
-                    if(squares[nextSquare].piece === Pieces.None ||
-                        Pieces.isWhite(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                    else break;
-
-                    if(Pieces.isWhite(squares[nextSquare].piece)) break;
-                }
-            }
-
-            // going topright
-            for(let r = rank + 1, f = file + 1; r < 8 && f < 8; r++, f++){
-                nextSquare = r * 8 + f;
-
-                if(Pieces.isWhite(piece)){
-                    // for white bishop
-                    if(squares[nextSquare].piece === Pieces.None ||
-                        Pieces.isBlack(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                    else break;
-
-                    if(Pieces.isBlack(squares[nextSquare].piece)) break;
-                }else{
-                    // for black bishop
-                    if(squares[nextSquare].piece === Pieces.None ||
-                        Pieces.isWhite(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                    else break;
-
-                    if(Pieces.isWhite(squares[nextSquare].piece)) break;
-                }
-            }
-
-            // going bottom left
-            for(let r = rank - 1, f = file - 1; r > -1 && f > -1; r--, f--){
-                nextSquare = r * 8 + f;
-
-                if(Pieces.isWhite(piece)){
-                    // for white bishop
-                    if(squares[nextSquare].piece === Pieces.None ||
-                        Pieces.isBlack(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                    else break;
-
-                    if(Pieces.isBlack(squares[nextSquare].piece)) break;
-                }else{
-                    // for black bishop
-                    if(squares[nextSquare].piece === Pieces.None ||
-                        Pieces.isWhite(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                    else break;
-
-                    if(Pieces.isWhite(squares[nextSquare].piece)) break;
-                }
-            }
-
-            // going bottom right
-            for(let r = rank - 1, f = file + 1; r > -1 && f < 8; r--, f++){
-                nextSquare = r * 8 + f;
-
-                if(Pieces.isWhite(piece)){
-                    // for white bishop
-                    if(squares[nextSquare].piece === Pieces.None ||
-                        Pieces.isBlack(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                    else break;
-
-                    if(Pieces.isBlack(squares[nextSquare].piece)) break;
-                }else{
-                    // for black bishop
-                    if(squares[nextSquare].piece === Pieces.None ||
-                        Pieces.isWhite(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                    else break;
-
-                    if(Pieces.isWhite(squares[nextSquare].piece)) break;
-                }
-            }
-        }
-        
-        if(Pieces.isRook(piece) || Pieces.isQueen(piece)){
-            // for rook and queen
-
-            let nextSquare = index;
-
-            // going top
-            for(let r = rank + 1, f = file; r < 8; r++){
-                nextSquare = r * 8 + f;
-
-                if(Pieces.isWhite(piece)){
-                    // for white rook
-                    if(squares[nextSquare].piece === Pieces.None ||
-                        Pieces.isBlack(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                    else break;
-
-                    if(Pieces.isBlack(squares[nextSquare].piece)) break;
-                }else{
-                    // for black rook
-                    if(squares[nextSquare].piece === Pieces.None ||
-                        Pieces.isWhite(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                    else break;
-
-                    if(Pieces.isWhite(squares[nextSquare].piece)) break;
-                }
-            }
-
-            // going bottom
-            for(let r = rank - 1, f = file; r > -1; r--){
-                nextSquare = r * 8 + f;
-
-                if(Pieces.isWhite(piece)){
-                    // for white rook
-                    if(squares[nextSquare].piece === Pieces.None ||
-                        Pieces.isBlack(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                    else break;
-
-                    if(Pieces.isBlack(squares[nextSquare].piece)) break;
-                }else{
-                    // for black rook
-                    if(squares[nextSquare].piece === Pieces.None ||
-                        Pieces.isWhite(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                    else break;
-
-                    if(Pieces.isWhite(squares[nextSquare].piece)) break;
-                }
-            }
-
-            // going left
-            for(let r = rank, f = file - 1; f > -1; f--){
-                nextSquare = r * 8 + f;
-
-                if(Pieces.isWhite(piece)){
-                    // for white rook
-                    if(squares[nextSquare].piece === Pieces.None ||
-                        Pieces.isBlack(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                    else break;
-
-                    if(Pieces.isBlack(squares[nextSquare].piece)) break;
-                }else{
-                    // for black rook
-                    if(squares[nextSquare].piece === Pieces.None ||
-                        Pieces.isWhite(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                    else break;
-
-                    if(Pieces.isWhite(squares[nextSquare].piece)) break;
-                }
-            }
-
-            // going right
-            for(let r = rank, f = file + 1; f < 8 ; f++){
-                nextSquare = r * 8 + f;
-
-                if(Pieces.isWhite(piece)){
-                    // for white rook
-                    if(squares[nextSquare].piece === Pieces.None ||
-                        Pieces.isBlack(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                    else break;
-
-                    if(Pieces.isBlack(squares[nextSquare].piece)) break;
-                }else{
-                    // for black rook
-                    if(squares[nextSquare].piece === Pieces.None ||
-                        Pieces.isWhite(squares[nextSquare].piece)) legalMoves.push(nextSquare);
-                    else break;
-
-                    if(Pieces.isWhite(squares[nextSquare].piece)) break;
-                }
-            }
-        }
-
-        return legalMoves;
+        });
+    
+        setSquares(temp);
+        setBoardState({
+            turn: Pieces.White,
+            from: -1,
+            castling: "kqKQ",
+            enPassant: -1,
+            promoteTo: 'Q'
+        });
+        setLegalMoves(General.generateLegalMoves(JSON.parse(JSON.stringify(temp)), JSON.parse(JSON.stringify({
+            turn: Pieces.White,
+            from: -1,
+            castling: "kqKQ",
+            enPassant: -1,
+            promoteTo: 'Q'
+        }))));
+        setPawnToPromote({
+            white: 'Q',
+            black: 'q'
+        });
     }
 
-    // function setBoard(placements){
-    //     let temp = [...squares], file = 0, rank = 7;
-    //     const pieces = placements.toString().split(' ')[0];
-    //     const text = "rnbqkbnrpRNBQKBNRP", numbers = "0123456789";
+    function startGame(){
+        const type = parseInt(document.querySelector("#typeInput").value);
 
-    //     pieces.split('').forEach(curr => {
-    //         if(text.indexOf(curr) !== -1){
-    //             const index = rank * 8 + file;
-    //             temp[index].image = Pieces.charToImage.get(curr);
-    //             temp[index].piece = Pieces.charToNumber.get(curr);
-    //             file++;
-    //         }else if(numbers.indexOf(curr) !== -1){
-    //             file += parseInt(curr);
-    //         }else{
-    //             rank--;
-    //             file = 0;
-    //         }
-    //     });
-    
-    //     setSquares(temp);
-    // }
+        if(isNaN(type) || type < 0 || type > 3) return;
+        
+        let temp = {...settings};
+        temp.gameType = parseInt(type);
+        if(type === 2) temp.rotateBoard = true;
+        else temp.rotateBoard = false;
+        
+        document.querySelector("#typeInput").value = "";
+        resetBoard();
+        setSettings(temp);
+    }
 
+    // playing with bot
+    // bot's turn to play
+    if(settings.gameType === 1 && boardState.turn === Pieces.Black){
+
+    }else if(settings.gameType === 2 && boardState.turn === Pieces.White){
+
+    }
 
     return(
         <>
             <div className="boardConatiner">
+                <div id="pawnPromotion">
+                    {
+                        boardState.turn === Pieces.Black &&
+                        <div className="pieceImages">
+                            <img src="/images/BlackQueen.png" alt="" onClick={() => {changePawnToPromote("black", 'q')}}/>
+                            <img src="/images/BlackRook.png" alt="" onClick={() => {changePawnToPromote("black", 'r')}}/>
+                            <img src="/images/BlackBishop.png" alt="" onClick={() => {changePawnToPromote("black", 'b')}}/>
+                            <img src="/images/BlackKnight.png" alt="" onClick={() => {changePawnToPromote("black", 'n')}}/>
+                        </div>
+                    }
+
+                    {
+                        boardState.turn === Pieces.White &&
+                        <div className="pieceImages">
+                            <img src="/images/WhiteQueen.png" alt="" onClick={() => {changePawnToPromote("white", 'Q')}}/>
+                            <img src="/images/WhiteRook.png" alt="" onClick={() => {changePawnToPromote("white", 'R')}}/>
+                            <img src="/images/WhiteBishop.png" alt="" onClick={() => {changePawnToPromote("white", 'B')}}/>
+                            <img src="/images/WhiteKnight.png" alt="" onClick={() => {changePawnToPromote("white", 'N')}}/>
+                        </div>
+                    }
+                </div>
                 <div
-                    className="ui"
+                    className="options"
+                >
+                    <ol>
+                        <li>White vs Computer</li>
+                        <li>Black vs Computer</li>
+                        <li>2 Player</li>
+                    </ol>
+                    <input type="text" name="" id="typeInput" />
+
+                    <div className="buttons">
+                        <div
+                            className="btn"
+                            onClick={() => {
+                                startGame();
+                            }}
+                            > Start
+                        </div>
+                        <div className="btn" onClick={resetBoard}>Reset</div>
+                    </div>
+                </div>
+                <div
+                    className="ui2"
                     onClick={() => {
-                        resetBoard();
+                        setCustomBoard();
                     }}
                 >
                     
                 </div>
-                <div className="board">
+                <div className={settings.rotateBoard ? "board rotate" : "board"}>
                     {
                         squares.map((square, index) => {
                             const currStyle = {
@@ -556,7 +448,7 @@ export default function Board(){
                             
                             return(
                                 <div
-                                className="square"
+                                className={settings.rotateBoard ? "square rotate" : "square"}
                                 key={index}
                                 style={currStyle}
                                 onClick={() => movePiece(index, square)}

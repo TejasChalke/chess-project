@@ -46,6 +46,10 @@ export default class Pieces{
         return (piece & 7) === this.Knight
     }
 
+    static isNone(piece){
+        return piece === this.None;
+    }
+
     static charToImage = new Map([
         ['n', "BlackKnight"],
         ['q', "BlackQueen"],
@@ -76,9 +80,9 @@ export default class Pieces{
         ['P', this.White | this.Pawn]
     ]);
 
-    static isSameColor(selected, currPlayer) {
-        selected &= 24;
+    static isSameColor(piece, currPlayer) {
+        piece &= 24;
 
-        return (currPlayer & selected) !== 0;
+        return (currPlayer & piece) !== 0;
     }
 }
