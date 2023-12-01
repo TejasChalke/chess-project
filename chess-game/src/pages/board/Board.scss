@@ -84,7 +84,6 @@
         
         aspect-ratio: 1/1;
         height: 640px;
-        background: red;
         
         &.rotate{
             transform: rotateZ(180deg) translate(50%, 50%);

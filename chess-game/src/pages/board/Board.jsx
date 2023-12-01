@@ -5,6 +5,7 @@ import './Board.scss'
 
 const alphabets = "abcdefgh";
 // gameTypes
+// 0 for Testing
 // 1 for White vs Computer
 // 2 for Black vs Computer
 // 3 for 2 Player
@@ -28,6 +29,8 @@ export default function Board(){
         rotateBoard: false
     })
 
+
+    // initial board setup
     useEffect(() => {
         let temp = [];
         for(let rank=0; rank<8; rank++){
@@ -83,7 +86,10 @@ export default function Board(){
         });
     }, [])
 
+
+    // check for checkmate or stalemate
     useEffect(() => {
+        if(settings.gameType === -1) return;
         let hasMoves = false;
         legalMoves.forEach(moves => {
             if(moves.length > 0){
@@ -92,12 +98,21 @@ export default function Board(){
         });
 
         if(!hasMoves){
-            if(General.isKingAttacked(boardState.turn)) console.log("Checkmate");
+            let indexToCheck = -1;
+            for(let i=0; i<64; i++){
+                if(Pieces.isSameColor(squares[i].piece, boardState.turn) && Pieces.isKing(squares[i].piece)){
+                    indexToCheck = i;
+                    break;
+                }
+            }
+
+            if(General.isSquareAttacked(boardState.turn, JSON.parse(JSON.stringify(squares)), indexToCheck)) console.log("Checkmate");
             else console.log("Stalemate");
         }
-    }, [legalMoves])
 
-    function resetBoard(){
+    }, [legalMoves, boardState.turn, settings.gameType, squares])
+
+    function resetBoard(currSettings){
         let temp = [];
         for(let rank=0; rank<8; rank++){
             for(let file=0; file<8; file++){
@@ -137,6 +152,24 @@ export default function Board(){
             })
         }
 
+        if(currSettings.gameType === -1){
+            setSquares(temp);
+            setBoardState({
+                turn: Pieces.White,
+                from: -1,
+                castling: "kqKQ",
+                enPassant: -1,
+                promoteTo: 'Q'
+            });
+            setLegalMoves(Array(64).fill([]));
+            setPawnToPromote({
+                white: 'Q',
+                black: 'q'
+            });
+            setSettings(currSettings);
+            return;
+        }
+
         let file = 0, rank = 7;
         const pieces = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".split(' ')[0];
         const text = "rnbqkbnrpRNBQKBNRP", numbers = "0123456789";
@@ -174,14 +207,11 @@ export default function Board(){
             white: 'Q',
             black: 'q'
         });
-        setSettings({
-            gameType: 3,
-            rotateBoard: false
-        })
+        setSettings(currSettings);
     }
 
     function movePiece(index, square){
-        console.log(boardState, Math.floor(index/8) + ", " + index%8 + " : " + square.piece);
+        // console.log(boardState, Math.floor(index/8) + ", " + index%8 + " : " + square.piece);
         // cannot move opponents pieces
         if(square.piece !== Pieces.None && (!Pieces.isSameColor(square.piece, boardState.turn) && boardState.from === -1)) return;
 
@@ -277,85 +307,90 @@ export default function Board(){
         }
     }
 
-    function setCustomBoard(){
-        let temp = [];
-        for(let rank=0; rank<8; rank++){
-            for(let file=0; file<8; file++){
-                temp.push({
-                    color: (rank + file) % 2 === 0 ? "#769656" : "#eeeed2",
-                    xOffset: file * 80,
-                    yOffset: rank * 80,
-                    image: "none",
-                    piece: Pieces.None,
-                    showMoveIcon: false,
-                    text: ""
-                })
-            }
-        }
+    // function setCustomBoard(){
+    //     let temp = [];
+    //     for(let rank=0; rank<8; rank++){
+    //         for(let file=0; file<8; file++){
+    //             temp.push({
+    //                 color: (rank + file) % 2 === 0 ? "#769656" : "#eeeed2",
+    //                 xOffset: file * 80,
+    //                 yOffset: rank * 80,
+    //                 image: "none",
+    //                 piece: Pieces.None,
+    //                 showMoveIcon: false,
+    //                 text: ""
+    //             })
+    //         }
+    //     }
 
-        for(let file=0; file<8; file++){
-            temp.push({
-                color: "#f7f7f700",
-                xOffset: file * 80,
-                yOffset: -55,
-                image: "none",
-                piece: Pieces.None,
-                showMoveIcon: false,
-                text: alphabets[file]
-            })
-        }
+    //     for(let file=0; file<8; file++){
+    //         temp.push({
+    //             color: "#f7f7f700",
+    //             xOffset: file * 80,
+    //             yOffset: -55,
+    //             image: "none",
+    //             piece: Pieces.None,
+    //             showMoveIcon: false,
+    //             text: alphabets[file]
+    //         })
+    //     }
 
-        for(let rank=0; rank<8; rank++){
-            temp.push({
-                color: "#f7f7f700",
-                xOffset: -55,
-                yOffset: rank * 80,
-                image: "none",
-                piece: Pieces.None,
-                showMoveIcon: false,
-                text: (rank + 1).toString()
-            })
-        }
+    //     for(let rank=0; rank<8; rank++){
+    //         temp.push({
+    //             color: "#f7f7f700",
+    //             xOffset: -55,
+    //             yOffset: rank * 80,
+    //             image: "none",
+    //             piece: Pieces.None,
+    //             showMoveIcon: false,
+    //             text: (rank + 1).toString()
+    //         })
+    //     }
 
-        let file = 0, rank = 7;
-        // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-        const pieces = "4k3/2ppppp/8/1K1P2q1/8/8/8/1N6 w KQkq - 0 1".split(' ')[0];
-        const text = "rnbqkbnrpRNBQKBNRP", numbers = "0123456789";
+    //     let file = 0, rank = 7;
+    //     // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    //     // const pieces = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".split(' ')[0];
+    //     const pieces = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1".split(' ')[0];
+    //     const text = "rnbqkbnrpRNBQKBNRP", numbers = "0123456789";
 
-        pieces.split('').forEach(curr => {
-            if(text.indexOf(curr) !== -1){
-                const index = rank * 8 + file;
-                temp[index].image = Pieces.charToImage.get(curr);
-                temp[index].piece = Pieces.charToNumber.get(curr);
-                file++;
-            }else if(numbers.indexOf(curr) !== -1){
-                file += parseInt(curr);
-            }else{
-                rank--;
-                file = 0;
-            }
-        });
+    //     pieces.split('').forEach(curr => {
+    //         if(text.indexOf(curr) !== -1){
+    //             const index = rank * 8 + file;
+    //             temp[index].image = Pieces.charToImage.get(curr);
+    //             temp[index].piece = Pieces.charToNumber.get(curr);
+    //             file++;
+    //         }else if(numbers.indexOf(curr) !== -1){
+    //             file += parseInt(curr);
+    //         }else{
+    //             rank--;
+    //             file = 0;
+    //         }
+    //     });
     
-        setSquares(temp);
-        setBoardState({
-            turn: Pieces.White,
-            from: -1,
-            castling: "kqKQ",
-            enPassant: -1,
-            promoteTo: 'Q'
-        });
-        setLegalMoves(General.generateLegalMoves(JSON.parse(JSON.stringify(temp)), JSON.parse(JSON.stringify({
-            turn: Pieces.White,
-            from: -1,
-            castling: "kqKQ",
-            enPassant: -1,
-            promoteTo: 'Q'
-        }))));
-        setPawnToPromote({
-            white: 'Q',
-            black: 'q'
-        });
-    }
+    //     setSquares(temp);
+    //     setBoardState({
+    //         turn: Pieces.White,
+    //         from: -1,
+    //         castling: "",
+    //         enPassant: -1,
+    //         promoteTo: 'Q'
+    //     });
+    //     setLegalMoves(General.generateLegalMoves(JSON.parse(JSON.stringify(temp)), JSON.parse(JSON.stringify({
+    //         turn: Pieces.White,
+    //         from: -1,
+    //         castling: "",
+    //         enPassant: -1,
+    //         promoteTo: 'Q'
+    //     }))));
+    //     setPawnToPromote({
+    //         white: 'Q',
+    //         black: 'q'
+    //     });
+    //     setSettings({
+    //         gameType: 0,
+    //         rotateBoard: false
+    //     })
+    // }
 
     function startGame(){
         const type = parseInt(document.querySelector("#typeInput").value);
@@ -368,16 +403,46 @@ export default function Board(){
         else temp.rotateBoard = false;
         
         document.querySelector("#typeInput").value = "";
-        resetBoard();
-        setSettings(temp);
+        resetBoard(temp);
+    }
+
+    async function getBotMove(){
+        let pieces = []
+        for(let i=0; i < 64; i++){
+            pieces.push(squares[i].piece);
+        }
+
+        let data = {
+            pieces: pieces,
+            boardState: {
+                toPlay: boardState.turn,
+                castling: boardState.castling,
+                enPassant: boardState.enPassant 
+            }
+        }
+
+        const response = await fetch('http://localhost:8080/getmove', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+        })
+
+        if(response.ok){
+            const res = await response.text();
+
+            console.log(res);
+        }else{
+            console.log("error getting move");
+        }
     }
 
     // playing with bot
-    // bot's turn to play
-    if(settings.gameType === 1 && boardState.turn === Pieces.Black){
-
-    }else if(settings.gameType === 2 && boardState.turn === Pieces.White){
-
+    // bot's turn to play}
+    if((settings.gameType === 1 && boardState.turn === Pieces.Black) ||
+    (settings.gameType === 2 && boardState.turn === Pieces.White)){
+        getBotMove();
     }
 
     return(
@@ -422,13 +487,22 @@ export default function Board(){
                             }}
                             > Start
                         </div>
-                        <div className="btn" onClick={resetBoard}>Reset</div>
+                        <div
+                            className="btn"
+                            onClick={() => {
+                                resetBoard({
+                                    gameType: -1,
+                                    rotateBoard: false
+                                });
+                            }}> Reset
+                        </div>
                     </div>
                 </div>
                 <div
                     className="ui2"
                     onClick={() => {
-                        setCustomBoard();
+                        // setCustomBoard();
+                        getBotMove();
                     }}
                 >
                     

@@ -2,8 +2,258 @@ import Pieces from "./Pieces";
 
 export default class General{
 
-    static isKingAttacked(color){
-        return true;
+    static testGeneration(depth, squares, boardState){
+        if(depth === 0) return 1;
+
+        const legalMoves = this.generateLegalMoves(JSON.parse(JSON.stringify(squares)), JSON.parse(JSON.stringify(boardState)));
+        let ans = 0;
+
+        for(let i=0; i<64; i++){
+
+            for(let j=0; j<legalMoves[i].length; j++){
+                let boardStateCopy = {...boardState};
+                boardStateCopy.from = i;
+                const res = this.makeMove(legalMoves[i][j], JSON.parse(JSON.stringify(boardStateCopy)), JSON.parse(JSON.stringify(squares)));
+                ans = ans + this.testGeneration(depth - 1, res.nextSquareState, res.nextBoardState);
+            }
+        }
+
+        return ans;
+    }
+
+    static isSquareAttacked(currPlayer, squares, indexToCheck){
+        let attacked = false, rank = Math.floor(indexToCheck / 8), file = indexToCheck % 8, nextIndex;
+        
+        // check for pawns
+        if(Pieces.isWhite(currPlayer)){
+            // for white king
+            if(rank < 5){
+                nextIndex = (rank + 1) * 8 + file - 1;
+                if(file > 0 && !Pieces.isSameColor(squares[nextIndex].piece, currPlayer) && Pieces.isPawn(squares[nextIndex].piece)){
+                    attacked = true;
+                }
+                
+                nextIndex = (rank + 1) * 8 + file + 1;
+                if(file < 7 && !Pieces.isSameColor(squares[nextIndex].piece, currPlayer) && Pieces.isPawn(squares[nextIndex].piece)){
+                    attacked = true;
+                }
+            }
+            
+            if(attacked) return true;
+        }else{
+            // for black king
+            if(rank > 2){
+                nextIndex = (rank - 1) * 8 + file - 1;
+                if(file > 0 && !Pieces.isSameColor(squares[nextIndex].piece, currPlayer) && Pieces.isPawn(squares[nextIndex].piece)){
+                    attacked = true;
+                }
+
+                nextIndex = (rank - 1) * 8 + file + 1;
+                if(file < 7 && !Pieces.isSameColor(squares[nextIndex].piece, currPlayer) && Pieces.isPawn(squares[nextIndex].piece)){
+                    attacked = true;
+                }
+            }
+
+            if(attacked) return true;
+        }
+        
+        
+        // check for knights
+        const hor = [1, 2, 2, 1, -1, -2, -2, -1];
+        const ver = [2, 1, -1, -2, -2, -1, 1, 2];
+        let nextFile = 0, nextRank = 0;
+        
+        for(let i=0; i<8; i++){
+            nextFile = file + hor[i];
+            nextRank = rank + ver[i];
+            
+            if(nextFile < 0 || nextFile > 7 || nextRank < 0 || nextRank > 7) continue;
+            
+            nextIndex = nextRank * 8 + nextFile;
+            
+            if(!Pieces.isSameColor(squares[nextIndex].piece, currPlayer) && Pieces.isKnight(squares[nextIndex].piece)){
+                attacked = true;
+                break;
+            }
+        }
+
+        if(attacked) return true;
+        
+        // check for bishops and queen
+        // going topleft
+        for(let r = rank + 1, f = file - 1; r < 8 && f > -1; r++, f--){
+            nextIndex = r * 8 + f;
+
+            if(!Pieces.isNone(squares[nextIndex].piece)){
+                // we encountered a piece
+                // it is either of same color or it is of opposite color and not
+                // a bishop or a queen
+                if(Pieces.isSameColor(squares[nextIndex].piece, currPlayer)){
+                    break;
+                }else{
+                    if(Pieces.isBishop(squares[nextIndex].piece) || Pieces.isQueen(squares[nextIndex].piece)){
+                        attacked = true;
+                        break;
+                    }else{
+                        break;
+                    }
+                }
+            }
+        }
+
+        if(attacked) return true;
+
+        // going topright
+        for(let r = rank + 1, f = file + 1; r < 8 && f < 8; r++, f++){
+            nextIndex = r * 8 + f;
+
+            if(!Pieces.isNone(squares[nextIndex].piece)){
+                // we encountered a piece
+                // it is either of same color or it is of opposite color and not
+                // a bishop or a queen
+                if(Pieces.isSameColor(squares[nextIndex].piece, currPlayer)){
+                    break;
+                }else{
+                    if(Pieces.isBishop(squares[nextIndex].piece) || Pieces.isQueen(squares[nextIndex].piece)){
+                        attacked = true;
+                        break;
+                    }else{
+                        break;
+                    }
+                }
+            }
+        }
+
+        if(attacked) return true;
+
+        // going bottom left
+        for(let r = rank - 1, f = file - 1; r > -1 && f > -1; r--, f--){
+            nextIndex = r * 8 + f;
+
+            if(!Pieces.isNone(squares[nextIndex].piece)){
+                // we encountered a piece
+                // it is either of same color or it is of opposite color and not
+                // a bishop or a queen
+                if(Pieces.isSameColor(squares[nextIndex].piece, currPlayer)){
+                    break;
+                }else{
+                    if(Pieces.isBishop(squares[nextIndex].piece) || Pieces.isQueen(squares[nextIndex].piece)){
+                        attacked = true;
+                        break;
+                    }else{
+                        break;
+                    }
+                }
+            }
+        }
+
+        if(attacked) return true;
+
+        // going bottom right
+        for(let r = rank - 1, f = file + 1; r > -1 && f < 8; r--, f++){
+            nextIndex = r * 8 + f;
+
+            if(!Pieces.isNone(squares[nextIndex].piece)){
+                // we encountered a piece
+                // it is either of same color or it is of opposite color and not
+                // a bishop or a queen
+                if(Pieces.isSameColor(squares[nextIndex].piece, currPlayer)){
+                    break;
+                }else{
+                    if(Pieces.isBishop(squares[nextIndex].piece) || Pieces.isQueen(squares[nextIndex].piece)){
+                        attacked = true;
+                        break;
+                    }else{
+                        break;
+                    }
+                }
+            }
+        }
+
+        if(attacked) return true;
+        
+        // for rooks and queen
+        // going top
+        for(let r = rank + 1, f = file; r < 8; r++){
+            nextIndex = r * 8 + f;
+            
+            if(Pieces.isNone(squares[nextIndex].piece)) continue;
+
+            if(Pieces.isSameColor(squares[nextIndex].piece, currPlayer)){
+                break;
+            }else{
+                if(Pieces.isRook(squares[nextIndex].piece) || Pieces.isQueen(squares[nextIndex].piece)){
+                    attacked = true;
+                    break;
+                }else{
+                    break;
+                }
+            }
+        }
+        
+        if(attacked) return true;
+        
+        // going bottom
+        for(let r = rank - 1, f = file; r > -1; r--){
+            nextIndex = r * 8 + f;
+            
+            if(Pieces.isNone(squares[nextIndex].piece)) continue;
+
+            if(Pieces.isSameColor(squares[nextIndex].piece, currPlayer)){
+                break;
+            }else{
+                if(Pieces.isRook(squares[nextIndex].piece) || Pieces.isQueen(squares[nextIndex].piece)){
+                    attacked = true;
+                    break;
+                }else{
+                    break;
+                }
+            }
+        }
+
+        if(attacked) return true;
+
+        // going left
+        for(let r = rank, f = file - 1; f > -1; f--){
+            nextIndex = r * 8 + f;
+
+            if(Pieces.isNone(squares[nextIndex].piece)) continue;
+
+            if(Pieces.isSameColor(squares[nextIndex].piece, currPlayer)){
+                break;
+            }else{
+                if(Pieces.isRook(squares[nextIndex].piece) || Pieces.isQueen(squares[nextIndex].piece)){
+                    attacked = true;
+                    break;
+                }else{
+                    break;
+                }
+            }
+        }
+
+        if(attacked) return true;
+
+        // going right
+        for(let r = rank, f = file + 1; f < 8 ; f++){
+            nextIndex = r * 8 + f;
+
+            if(Pieces.isNone(squares[nextIndex].piece)) continue;
+
+            if(Pieces.isSameColor(squares[nextIndex].piece, currPlayer)){
+                break;
+            }else{
+                if(Pieces.isRook(squares[nextIndex].piece) || Pieces.isQueen(squares[nextIndex].piece)){
+                    attacked = true;
+                    break;
+                }else{
+                    break;
+                }
+            }
+        }
+
+        if(attacked) return true;
+
+        return false;
     }
 
     static generateLegalMoves(squares, boardState){
@@ -53,7 +303,7 @@ export default class General{
                     }
 
                     if(isLegalMove){
-                        console.log("legal move: " + i + ", " + move);
+                        // console.log("legal move: " + i + ", " + move);
                         holder.push(move);
                     }
                 }
@@ -77,12 +327,16 @@ export default class General{
             if(Pieces.isWhite(piece)){
                 // piece is white
                 let nextSquare = (rank + 1) * 8 + file;
-                if(currSquares[nextSquare].piece === Pieces.None) currentMoves.push(nextSquare);
 
-                if(rank === 1){
-                    nextSquare = (rank + 2) * 8 + file;
-                    if(currSquares[nextSquare].piece === Pieces.None) currentMoves.push(nextSquare);
+                if(currSquares[nextSquare].piece === Pieces.None){
+                    currentMoves.push(nextSquare);
+
+                    if(rank === 1){
+                        nextSquare = (rank + 2) * 8 + file;
+                        if(currSquares[nextSquare].piece === Pieces.None) currentMoves.push(nextSquare);
+                    }
                 }
+
 
                 if(file > 0){
                     nextSquare = (rank + 1) * 8 + file - 1;
@@ -98,13 +352,14 @@ export default class General{
             }else{
                 // piece is black
                 let nextSquare = (rank - 1) * 8 + file;
-                if(currSquares[nextSquare].piece === Pieces.None ||
-                    Pieces.isWhite(currSquares[nextSquare].piece)) currentMoves.push(nextSquare);
-
-                if(rank === 6){
-                    nextSquare = (rank - 2) * 8 + file;
-                    if(currSquares[nextSquare].piece === Pieces.None ||
-                        Pieces.isWhite(currSquares[nextSquare].piece)) currentMoves.push(nextSquare);
+                
+                if(currSquares[nextSquare].piece === Pieces.None){
+                    currentMoves.push(nextSquare);
+                    
+                    if(rank === 6){
+                        nextSquare = (rank - 2) * 8 + file;
+                        if(currSquares[nextSquare].piece === Pieces.None) currentMoves.push(nextSquare);
+                    }
                 }
 
                 if(file > 0){
@@ -177,9 +432,18 @@ export default class General{
                 }
             }
             if(clear){
-                if((Pieces.isWhite(piece) && currBoardState.castling.indexOf('K') !== -1 && rank === 0) ||
-                (Pieces.isBlack(piece) && currBoardState.castling.indexOf('k') !== -1 && rank === 7))
-                currentMoves.push(rank * 8 + file + 2);
+                if(Pieces.isWhite(piece) && currBoardState.castling.indexOf('K') !== -1 && rank === 0){
+                    if(!this.isSquareAttacked(currBoardState.turn, currSquares, file + 1) &&
+                    !this.isSquareAttacked(currBoardState.turn, currSquares, file) &&
+                    !this.isSquareAttacked(currBoardState.turn, currSquares, file + 2)) currentMoves.push(rank * 8 + file + 2);
+                    else console.log("safe");
+                }
+                if(Pieces.isBlack(piece) && currBoardState.castling.indexOf('k') !== -1 && rank === 7){
+                    if(!this.isSquareAttacked(currBoardState.turn, currSquares, 7 * 8 + file + 1) &&
+                    !this.isSquareAttacked(currBoardState.turn, currSquares, 7 * 8 + file &&
+                    !this.isSquareAttacked(currBoardState.turn, currSquares, 7 * 8 + file + 2))) currentMoves.push(rank * 8 + file + 2);
+                }
+                
             }
             
             clear = true;
@@ -191,9 +455,17 @@ export default class General{
                 }
             }
             if(clear){
-                if((Pieces.isWhite(piece) && currBoardState.castling.indexOf('Q') !== -1 && rank === 0) ||
-                (Pieces.isBlack(piece) && currBoardState.castling.indexOf('q') !== -1 && rank === 7))
-                currentMoves.push(rank * 8 + file - 2);
+                if(Pieces.isWhite(piece) && currBoardState.castling.indexOf('Q') !== -1 && rank === 0){
+                    if(!this.isSquareAttacked(currBoardState.turn, currSquares, file - 1) &&
+                    !this.isSquareAttacked(currBoardState.turn, currSquares, file) &&
+                    !this.isSquareAttacked(currBoardState.turn, currSquares, file - 2)) currentMoves.push(rank * 8 + file + 2);
+                    else console.log("safe");
+                }
+                if(Pieces.isBlack(piece) && currBoardState.castling.indexOf('q') !== -1 && rank === 7){
+                    if(!this.isSquareAttacked(currBoardState.turn, currSquares, 7 * 8 + file - 1) &&
+                    !this.isSquareAttacked(currBoardState.turn, currSquares, 7 * 8 + file) &&
+                    !this.isSquareAttacked(currBoardState.turn, currSquares, 7 * 8 + file - 2)) currentMoves.push(rank * 8 + file - 2);
+                }
             }
             
         }
@@ -382,6 +654,8 @@ export default class General{
 
     static makeMove(to, currBoardState, currSquares){
 
+        if(currBoardState.from === -1) return undefined;
+        
         if(currSquares[to].piece === Pieces.None){
             let temp = JSON.parse(JSON.stringify(currSquares));
             let nextBoardState = {...currBoardState};
@@ -473,6 +747,8 @@ export default class General{
                     nextBoardState.castling = newCastle;
                 }
 
+                nextBoardState.enPassant = -1;
+
             } else if(Pieces.isPawn(temp[currBoardState.from].piece)){
                 // if capturing by en passant
                 if(to === currBoardState.enPassant){
@@ -513,6 +789,8 @@ export default class General{
                 
                 temp[currBoardState.from].piece = Pieces.None;
                 temp[currBoardState.from].image = "none";
+
+                nextBoardState.enPassant = -1;
             }
             
             // changing castling rights
