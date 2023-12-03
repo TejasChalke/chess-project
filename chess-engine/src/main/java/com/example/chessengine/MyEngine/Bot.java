@@ -1,16 +1,20 @@
 package com.example.chessengine.MyEngine;
 
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
-@RestController
 public class Bot {
+    Board board;
+    Generator generator;
 
-    @CrossOrigin("http://localhost:3000")
-    @PostMapping("/getmove")
-    ResponseEntity<String> getMove(@RequestBody MyRequestBody body){
-        System.out.println(body.pieces);
+    public Bot(){
+        this.board = new Board();
+        this.generator = new Generator();
+        board.LoadPosition();
+    }
 
-        return ResponseEntity.ok("test");
+    public Move FindBestMove(){
+        List<Move> moves = generator.GenerateMoves(board);
+
+        return null;
     }
 }
