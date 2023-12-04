@@ -6,7 +6,7 @@ import java.util.List;
 public class PrecomputedData {
     // first four are orthogonal
     // last four are diagonal
-    static final byte[] moveDir = new byte[] {8, -8, 1, -1, 9, -9, 7, -7};
+    static final byte[] moveDirOffset = new byte[] { 8, -8, -1, 1, 7, -7, 9, -9 };
 
     // distance from a particular square to a direction
     static int[][] distanceToEdge;
@@ -29,6 +29,8 @@ public class PrecomputedData {
 
     static long[] rookMoves, bishopMoves, queenMoves;
 
+    static int[] directionalLookup;
+
     static {
         distanceToEdge = new int[64][8];
         int[] allKnightJumps = { 15, 17, -17, -15, 10, -6, 6, -10 };
@@ -41,6 +43,12 @@ public class PrecomputedData {
         whitePawnAttackSquares = new int[64][];
         blackPawnAttackSquares = new int[64][];
         pawnAttackMask = new long[64][];
+
+        rookMoves = new long[64];
+        bishopMoves = new long[64];
+        queenMoves = new long[64];
+
+        directionalLookup = new int[127];
 
         for (int squareIndex = 0; squareIndex < 64; squareIndex++) {
 
@@ -88,7 +96,7 @@ public class PrecomputedData {
 
             // king moves
             List<Integer> legalKingMoves = new ArrayList<Integer>();
-            for(int kingMoveDelta : moveDir) {
+            for(int kingMoveDelta : moveDirOffset) {
                 int kingMoveSquare = squareIndex + kingMoveDelta;
 
                 if (kingMoveSquare >= 0 && kingMoveSquare < 64) {
@@ -144,7 +152,7 @@ public class PrecomputedData {
 
             // Rook moves
             for (int directionIndex = 0; directionIndex < 4; directionIndex++) {
-                int currentDirOffset = moveDir[directionIndex];
+                int currentDirOffset = moveDirOffset[directionIndex];
                 for (int n = 0; n < distanceToEdge[squareIndex][directionIndex]; n++) {
                     int targetSquare = squareIndex + currentDirOffset * (n + 1);
                     rookMoves[squareIndex] |= 1L << targetSquare;
@@ -153,7 +161,7 @@ public class PrecomputedData {
 
             // Bishop moves
             for (int directionIndex = 4; directionIndex < 8; directionIndex++) {
-                int currentDirOffset = moveDir[directionIndex];
+                int currentDirOffset = moveDirOffset[directionIndex];
                 for (int n = 0; n < distanceToEdge[squareIndex][directionIndex]; n++) {
                     int targetSquare = squareIndex + currentDirOffset * (n + 1);
                     bishopMoves[squareIndex] |= 1L << targetSquare;
@@ -161,6 +169,21 @@ public class PrecomputedData {
             }
 
             queenMoves[squareIndex] = rookMoves[squareIndex] | bishopMoves[squareIndex];
+        }
+
+        for (int i = 0; i < 127; i++) {
+            int offset = i - 63;
+            int absOffset = Math.abs(offset);
+            int absDir = 1;
+            if (absOffset % 9 == 0) {
+                absDir = 9;
+            } else if (absOffset % 8 == 0) {
+                absDir = 8;
+            } else if (absOffset % 7 == 0) {
+                absDir = 7;
+            }
+
+            directionalLookup[i] = absDir * (offset >= 0 ? 1 : -1);
         }
     }
 }

@@ -18,8 +18,13 @@ public class Pieces {
         return color == piece;
     }
 
+
     static boolean isWhite(int piece){
         return (piece & 24) == Pieces.White;
+    }
+
+    static boolean isNone(int piece){
+        return (piece & 7) == Pieces.None;
     }
 
     static boolean isKing(int piece){

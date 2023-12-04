@@ -17,7 +17,7 @@ public class EngineServer {
         return ResponseEntity.ok("test");
     }
 
-    @CrossOrigin("http://localhost:3000")
+    @CrossOrigin("*")
     @PostMapping("/getmove")
     ResponseEntity<String> getMove(@RequestBody MyRequestBody body){
         System.out.println(body.pieces);

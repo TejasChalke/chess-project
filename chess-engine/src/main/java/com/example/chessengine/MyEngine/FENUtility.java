@@ -91,7 +91,7 @@ public class FENUtility {
         }
 
         if(arr.length > 3 && !arr[3].equals("-")){
-            int epSquare = BoardUtility.indexFromNotation(arr[3]);
+            int epSquare = BoardUtility.fileFromNotation(arr[3]) + 1;
             currentBoardState |= (epSquare << 4);
         }
 

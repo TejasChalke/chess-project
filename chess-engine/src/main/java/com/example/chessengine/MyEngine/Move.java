@@ -3,6 +3,8 @@ package com.example.chessengine.MyEngine;
 public class Move {
     static enum Flag {
         EN_PASSANT,
+        CASTLE_KING_SIDE,
+        CASTLE_QUEEN_SIDE,
         PROMOTE_TO_ROOK,
         PROMOTE_TO_QUEEN,
         PROMOTE_TO_BISHOP,

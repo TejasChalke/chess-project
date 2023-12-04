@@ -17,10 +17,6 @@ public class Board {
     PieceList[] pawns, knights, bishops, rooks, queens;
     int[] kingIndex;
 
-    public void FindBestMove(){
-
-    }
-
     public void MakeMove(Move move){
 
     }
@@ -33,13 +29,6 @@ public class Board {
         LoadData data = FENUtility.loadSquares(FENUtility.startFEN);
 
         InitializeData(data);
-
-//        for(int i=7; i>=0; i--){
-//            for(int j=0; j<8; j++){
-//                System.out.printf("%4d", squares[i * 8 + j] );
-//            }
-//            System.out.println();
-//        }
     }
 
     public void LoadPosition(String fen){
