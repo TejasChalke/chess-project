@@ -7,7 +7,7 @@ public class Generator {
     List<Move> moves;
     Board board;
     long attackMask, attackMaskNoPawns, slidingAttackMask, knightAttackMask, pawnAttackMask, checkRayMask, pinRayMask;
-    boolean inCheck, inDoubleCheck, isPinned;
+    boolean inCheck, inDoubleCheck, pinsExist;
     int currentColorIndex, opponentColorIndex, kingSquare;
 
     public List<Move> GenerateMoves(Board board){
@@ -24,275 +24,323 @@ public class Generator {
         GenerateSlidingMoves();
         GenerateKnightMoves();
         GeneratePawnMoves();
-        // for(Move m: moves) System.out.println(m.from + "->" + m.to);
-
-        // BoardUtility.displayPosition(board.squares, attackMask);
-        // BoardUtility.displayPosition(board.squares, checkRayMask);
 
         return moves;
     }
     
     void GenerateKingMoves(){
-        boolean canCastle;
-        // generate general legal moves for king
-        for(int targetSquare : PrecomputedData.kingAttackSquares[kingSquare]) {
+        boolean HasKingsideCastleRight = board.whiteToMove ? (board.currentBoardState & 1) != 0 : (board.currentBoardState & 4) != 0;
+        boolean HasQueensideCastleRight = board.whiteToMove ? (board.currentBoardState & 2) != 0 : (board.currentBoardState & 8) != 0;
 
-            if(Pieces.isSameColor(board.colorToMove, board.squares[targetSquare]) || isSquareAttacked(targetSquare)) continue;
+        for (int i = 0; i < PrecomputedData.kingAttackSquares[kingSquare].length; i++) {
+            int targetSquare = PrecomputedData.kingAttackSquares[kingSquare][i];
+            int pieceOnTargetSquare = board.squares[targetSquare];
 
-            moves.add(new Move(kingSquare, targetSquare));
-        }
+            // Skip squares occupied by friendly pieces
+            if (Pieces.isSameColor(board.colorToMove, pieceOnTargetSquare)) {
+                continue;
+            }
 
-        // white castling moves
-        if(!inCheck && kingSquare == BoardUtility.e1 && Pieces.isWhite(board.squares[kingSquare])){
-            canCastle = (board.currentBoardState & 1) != 0;
-
-            if(canCastle && Pieces.isNone(board.squares[BoardUtility.f1]) && Pieces.isNone(board.squares[BoardUtility.g1])){
-                if(!isSquareAttacked(BoardUtility.f1) && !isSquareAttacked(BoardUtility.g1)){
-                    moves.add(new Move(kingSquare, BoardUtility.g1, Move.Flag.CASTLE_KING_SIDE));
+            boolean isCapture = Pieces.isSameColor(board.opponentColor, pieceOnTargetSquare);
+            if (!isCapture) {
+                // King can't move to square marked as under enemy control, unless he is capturing that piece
+                // Also skip if not generating quiet moves
+                if (isIntersectingCheck(targetSquare)) {
+                    continue;
                 }
             }
 
-            canCastle = (board.currentBoardState & 2) != 0;
+            // Safe for king to move to this square
+            if (!isSquareAttacked(targetSquare)) {
+//                moves.add(new Move (kingSquare, targetSquare));
+                moves.add(new Move (kingSquare, targetSquare, 999));
 
-            if(canCastle && Pieces.isNone(board.squares[BoardUtility.d1]) && Pieces.isNone(board.squares[BoardUtility.c1])){
-                if(!isSquareAttacked(BoardUtility.d1) && !isSquareAttacked(BoardUtility.c1)){
-                    moves.add(new Move(kingSquare, BoardUtility.c1, Move.Flag.CASTLE_QUEEN_SIDE));
-                }
-            }
-        }
-
-        // black castling moves
-        if(!inCheck && kingSquare == BoardUtility.e8 && !Pieces.isWhite(board.squares[kingSquare])){
-            canCastle = (board.currentBoardState & 3) != 0;
-
-            if(canCastle && Pieces.isNone(board.squares[BoardUtility.f8]) && Pieces.isNone(board.squares[BoardUtility.g8])){
-                if(!isSquareAttacked(BoardUtility.f8) && !isSquareAttacked(BoardUtility.g8)){
-                    moves.add(new Move(kingSquare, BoardUtility.g8, Move.Flag.CASTLE_KING_SIDE));
-                }
-            }
-
-            canCastle = (board.currentBoardState & 4) != 0;
-
-            if(canCastle && Pieces.isNone(board.squares[BoardUtility.d8]) && Pieces.isNone(board.squares[BoardUtility.c8])){
-                if(!isSquareAttacked(BoardUtility.d8) && !isSquareAttacked(BoardUtility.c8)){
-                    moves.add(new Move(kingSquare, BoardUtility.c8, Move.Flag.CASTLE_QUEEN_SIDE));
+                // Castling:
+                if (!inCheck && !isCapture) {
+                    // Castle kingside
+                    if ((targetSquare == BoardUtility.f1 || targetSquare == BoardUtility.f8) && HasKingsideCastleRight) {
+                        int castleKingsideSquare = targetSquare + 1;
+                        if (board.squares[castleKingsideSquare] == Pieces.None) {
+                            if (!isSquareAttacked(castleKingsideSquare)) {
+//                                moves.add(new Move (kingSquare, castleKingsideSquare, Move.Flag.CASTLE_KING_SIDE));
+                                moves.add(new Move (kingSquare, castleKingsideSquare, Move.Flag.CASTLE_KING_SIDE, 999));
+                            }
+                        }
+                    }
+                    // Castle queenside
+                    else if ((targetSquare == BoardUtility.d1 || targetSquare == BoardUtility.d8) && HasQueensideCastleRight) {
+                        int castleQueensideSquare = targetSquare - 1;
+                        if (board.squares[castleQueensideSquare] == Pieces.None && board.squares[castleQueensideSquare - 1] == Pieces.None) {
+                            if (!isSquareAttacked(castleQueensideSquare)) {
+                                moves.add(new Move(kingSquare, castleQueensideSquare, Move.Flag.CASTLE_QUEEN_SIDE, 999));
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 
     void GenerateSlidingMoves(){
+
         PieceList queens = board.queens[currentColorIndex];
         for(int i=0; i<queens.count; i++){
+//            if(queens.occupiedSquares[i] == -1){
+//                System.out.println("Gotcha Q");
+//                continue;
+//            }
             GenerateSlidingPieceMoves(queens.occupiedSquares[i], 0, 8);
         }
 
         PieceList bishops = board.bishops[currentColorIndex];
         for(int i=0; i<bishops.count; i++){
+//            if(bishops.occupiedSquares[i] == -1){
+//                System.out.println("Gotcha B");
+//                continue;
+//            }
             GenerateSlidingPieceMoves(bishops.occupiedSquares[i], 4, 8);
         }
 
         PieceList rooks = board.rooks[currentColorIndex];
         for(int i=0; i<rooks.count; i++){
+//            if(rooks.occupiedSquares[i] == -1){
+//                System.out.println("Gotcha R");
+//                continue;
+//            }
             GenerateSlidingPieceMoves(rooks.occupiedSquares[i], 0, 4);
         }
     }
 
     void GenerateSlidingPieceMoves(int startSquare, int startIndex, int endIndex){
-        if(isPinned(startSquare)){
-            if(inCheck) return;
+        int temp;
+        if(startIndex == 0 && endIndex == 8) temp = 777;
+        else if(startIndex == 0) temp = 444;
+        else temp = 111;
 
-            for (int directionIndex = startIndex; directionIndex < endIndex; directionIndex++) {
-                int currentDirOffset = PrecomputedData.moveDirOffset[directionIndex];
+        boolean isPinned = isPinned(startSquare);
 
-                // can only move in pinned direction
-                if(!isMovingAlongRay(currentDirOffset, kingSquare, startSquare)) continue;
+        // If this piece is pinned, and the king is in check, this piece cannot move
+        if (inCheck && isPinned) {
+            return;
+        }
 
-                for (int n = 0; n < PrecomputedData.distanceToEdge[startSquare][directionIndex]; n++) {
-                    int targetSquare = startSquare + currentDirOffset * (n + 1);
+        for (int directionIndex = startIndex; directionIndex < endIndex; directionIndex++) {
+            int currentDirOffset = PrecomputedData.moveDirOffset[directionIndex];
 
-                    moves.add(new Move(startSquare, targetSquare));
-
-                    // a piece(pinning piece) is encountered
-                    // stop generating
-                    if(!Pieces.isNone(board.squares[targetSquare])) break;
-                }
+            // If pinned, this piece can only move along the ray towards/away from the friendly king, so skip other directions
+            if (isPinned && !isMovingAlongRay(currentDirOffset, kingSquare, startSquare)) {
+                continue;
             }
-        }else {
-            // piece is not pinned and can move
-            for (int directionIndex = startIndex; directionIndex < endIndex; directionIndex++) {
-                int currentDirOffset = PrecomputedData.moveDirOffset[directionIndex];
-                boolean isCapture = false;
 
-                for (int n = 0; n < PrecomputedData.distanceToEdge[startSquare][directionIndex]; n++) {
-                    int targetSquare = startSquare + currentDirOffset * (n + 1);
-                    // if we encounter same color piece then we stop
-                    if (!Pieces.isNone(board.squares[targetSquare])) {
-                        if (Pieces.isSameColor(board.colorToMove, board.squares[targetSquare])) break;
-                        else isCapture = true;
-                    }
+            for (int n = 0; n < PrecomputedData.distanceToEdge[startSquare][directionIndex]; n++) {
+                int targetSquare = startSquare + currentDirOffset * (n + 1);
+                int targetSquarePiece = board.squares[targetSquare];
 
-                    // if the king is not in check or
-                    // the current move will block the check
-                    if (!inCheck || isIntersectingCheck(targetSquare)) {
-                        moves.add(new Move(startSquare, targetSquare));
-                    }
+                // Blocked by friendly piece, so stop looking in this direction
+                if (Pieces.isSameColor(board.colorToMove, targetSquarePiece)) {
+                    break;
+                }
+                boolean isCapture = targetSquarePiece != Pieces.None;
 
-                    // captured a piece
-                    if(isCapture) break;
+                boolean movePreventsCheck = isIntersectingCheck(targetSquare);
+                if (movePreventsCheck || !inCheck) {
+//                    moves.add(new Move (startSquare, targetSquare));
+                    moves.add(new Move (startSquare, targetSquare, temp));
+                }
+
+                // If square not empty, can't move any further in this direction
+                // Also, if this move blocked a check, further moves won't block the check
+                if (isCapture || movePreventsCheck) {
+                    break;
                 }
             }
         }
     }
 
     void GenerateKnightMoves(){
-        PieceList knights = board.knights[currentColorIndex];
+        PieceList myKnights = board.knights[board.colorToMoveIndex];
 
-        for(int i=0; i<knights.count; i++){
-            int startSquare = knights.occupiedSquares[i];
-            if(isPinned(startSquare)) continue;
+        for (int i = 0; i < myKnights.count; i++) {
+            int startSquare = myKnights.occupiedSquares[i];
+//            if(startSquare == -1){
+//                System.out.println("Gotcha N");
+//                continue;
+//            }
 
-            for(int targetSquare: PrecomputedData.knightAttackSquares[startSquare]){
-                if(Pieces.isSameColor(board.colorToMove, board.squares[targetSquare])) continue;
-                if(inCheck && !isIntersectingCheck(targetSquare)) continue;
+            // Knight cannot move if it is pinned
+            if (isPinned(startSquare)) {
+                continue;
+            }
 
-                moves.add(new Move(startSquare, targetSquare));
+            for (int knightMoveIndex = 0; knightMoveIndex < PrecomputedData.knightAttackSquares[startSquare].length; knightMoveIndex++) {
+                int targetSquare = PrecomputedData.knightAttackSquares[startSquare][knightMoveIndex];
+                int targetSquarePiece = board.squares[targetSquare];
+                boolean isCapture = Pieces.isSameColor(board.opponentColor, targetSquarePiece);
+                // Skip if square contains friendly piece, or if in check and knight is not interposing/capturing checking piece
+                if (Pieces.isSameColor(board.colorToMove, targetSquarePiece) || (inCheck && !isIntersectingCheck(targetSquare))) {
+                    continue;
+                }
+
+//                moves.add(new Move (startSquare, targetSquare));
+                moves.add(new Move (startSquare, targetSquare, 333));
             }
         }
     }
 
     void GeneratePawnMoves(){
-        PieceList pawns = board.pawns[currentColorIndex];
+        PieceList myPawns = board.pawns[currentColorIndex];
+        int pawnOffset = (board.colorToMove == Pieces.White) ? 8 : -8;
+        int startRank = (board.whiteToMove) ? 1 : 6;
+        int finalRankBeforePromotion = (board.whiteToMove) ? 6 : 1;
 
-        for(int i=0; i<pawns.count; i++){
-            int startSquare = pawns.occupiedSquares[i], targetSquare;
-            int rank = startSquare / 8, file = startSquare % 8;
-            boolean whiteToMove = board.whiteToMove, pawnPinned = isPinned(startSquare);
-            int moveDir = whiteToMove ? 8 : -8;
-            int epSquareFile = (int)((board.currentBoardState >> 4) & 15) - 1;
-            int epSquare = -1;
+        int enPassantFile = ((int) (board.currentBoardState >> 4) & 15) - 1;
+        int enPassantSquare = -1;
+        if (enPassantFile != -1) {
+            enPassantSquare = 8 * ((board.whiteToMove) ? 5 : 2) + enPassantFile;
+        }
 
-            if(epSquareFile != -1) {
-                epSquare = (whiteToMove ? 40 : 16) + epSquareFile;
-            }
-            System.out.println(epSquareFile + ", " + epSquare);
 
-            // cannot move this pawn
-            if(pawnPinned && inCheck) continue;
+        for (int i = 0; i < myPawns.count; i++) {
+            int startSquare = myPawns.occupiedSquares[i];
+//            if(startSquare == -1){
+//                System.out.println("Gotcha P");
+//                continue;
+//            }
 
-            if(!pawnPinned || isMovingAlongRay(moveDir, kingSquare, startSquare)){
-                targetSquare = startSquare + moveDir;
+            int rank = startSquare / 8;
+            boolean oneStepFromPromotion = rank == finalRankBeforePromotion;
 
-                if(Pieces.isNone(board.squares[targetSquare])){
+            int squareOneForward = startSquare + pawnOffset;
 
-                    if(!inCheck || isIntersectingCheck(targetSquare)) {
-                        // pawn made it to last file
-                        if ((whiteToMove && rank == 6) || (!whiteToMove && rank == 1))
-                            GeneratePromotionMoves(startSquare, targetSquare);
-                        else moves.add(new Move(startSquare, targetSquare));
+            // Square ahead of pawn is empty: forward moves
+            if (board.squares[squareOneForward] == Pieces.None) {
+                // Pawn not pinned, or is moving along line of pin
+                if (!isPinned(startSquare) || isMovingAlongRay(pawnOffset, startSquare, board.kingIndex[board.colorToMoveIndex])) {
+                    // Not in check, or pawn is interposing checking piece
+                    if (!inCheck || isIntersectingCheck(squareOneForward)) {
+                        if (oneStepFromPromotion) {
+                            GeneratePromotionMoves(startSquare, squareOneForward);
+                        } else {
+//                            moves.add(new Move (startSquare, squareOneForward));
+                            moves.add(new Move (startSquare, squareOneForward, 888));
+                        }
                     }
 
-                    // moving 2 squares ahead
-                    if((whiteToMove && rank == 1) || (!whiteToMove && rank == 6)){
-                        targetSquare += moveDir;
-
-                        if(!inCheck || isIntersectingCheck(targetSquare)){
-                            if(Pieces.isNone(board.squares[targetSquare]))
-                                moves.add(new Move(startSquare, targetSquare, Move.Flag.PAWN_TWO_SQUARES_FORWARD));
+                    // Is on starting square (so can move two forward if not blocked)
+                    if (rank == startRank) {
+                        int squareTwoForward = squareOneForward + pawnOffset;
+                        if (board.squares[squareTwoForward] == Pieces.None) {
+                            // Not in check, or pawn is interposing checking piece
+                            if (!inCheck || isIntersectingCheck(squareTwoForward)) {
+//                                moves.add(new Move (startSquare, squareTwoForward, Move.Flag.PAWN_TWO_SQUARES_FORWARD));
+                                moves.add(new Move (startSquare, squareTwoForward, Move.Flag.PAWN_TWO_SQUARES_FORWARD, 878));
+                            }
                         }
                     }
                 }
             }
 
-            // normal and en passant captures
-            moveDir = whiteToMove ? 9 : -9;
-            if(!pawnPinned || isMovingAlongRay(moveDir, kingSquare, startSquare)){
-                targetSquare = startSquare + moveDir;
+            for (int j = 0; j < 2; j++) {
+                // Check if square exists diagonal to pawn
+                if (PrecomputedData.distanceToEdge[startSquare][PrecomputedData.pawnAttackDir[board.colorToMoveIndex][j]] > 0) {
+                    // move in direction friendly pawns attack to get square from which enemy pawn would attack
+                    int pawnCaptureDir = PrecomputedData.moveDirOffset[PrecomputedData.pawnAttackDir[board.colorToMoveIndex][j]];
+                    int targetSquare = startSquare + pawnCaptureDir;
+                    int targetPiece = board.squares[targetSquare];
 
-                if(!Pieces.isNone(board.squares[targetSquare]) && !Pieces.isSameColor(board.colorToMove, board.squares[targetSquare])){
-                    moves.add(new Move(startSquare, targetSquare));
+                    // If piece is pinned, and the square it wants to move to is not on same line as the pin, then skip this direction
+                    if (isPinned(startSquare) && !isMovingAlongRay(pawnCaptureDir, kingSquare, startSquare)) {
+                        continue;
+                    }
 
-                    // pawn took a piece on last file
-                    if((whiteToMove && rank == 6) || (!whiteToMove && rank == 1)) GeneratePromotionMoves(startSquare, targetSquare);
-                }
+                    // Regular capture
+                    if (Pieces.isSameColor(board.opponentColor, targetPiece)) {
+                        // If in check, and piece is not capturing/interposing the checking piece, then skip to next square
+                        if (inCheck && !isIntersectingCheck(targetSquare)) {
+                            continue;
+                        }
+                        if (oneStepFromPromotion) {
+                            GeneratePromotionMoves(startSquare, targetSquare);
+                        } else {
+//                            moves.add(new Move (startSquare, targetSquare));
+                            moves.add(new Move (startSquare, targetSquare, 887));
+                        }
+                    }
 
-                if(Pieces.isNone(board.squares[targetSquare]) && targetSquare == epSquare){
-                    if(!inCheckAfterEnPassant(startSquare, targetSquare)) moves.add(new Move(startSquare, targetSquare, Move.Flag.EN_PASSANT));
-                }
-            }
-
-            // normal and en passant captures
-            moveDir = whiteToMove ? 7 : -7;
-            if(!pawnPinned || isMovingAlongRay(moveDir, kingSquare, startSquare)){
-                targetSquare = startSquare + moveDir;
-
-                if(!Pieces.isNone(board.squares[targetSquare]) && !Pieces.isSameColor(board.colorToMove, board.squares[targetSquare])){
-                    moves.add(new Move(startSquare, targetSquare));
-
-                    // pawn took a piece on last file
-                    if((whiteToMove && rank == 6) || (!whiteToMove && rank == 1)) GeneratePromotionMoves(startSquare, targetSquare);
-                }
-
-                if(Pieces.isNone(board.squares[targetSquare]) && targetSquare == epSquare){
-                    if(!inCheckAfterEnPassant(startSquare, targetSquare)) moves.add(new Move(startSquare, targetSquare, Move.Flag.EN_PASSANT));
+                    // Capture en-passant
+                    if (targetSquare == enPassantSquare) {
+                        if (!inCheckAfterEnPassant(startSquare, targetSquare)) {
+//                            moves.add(new Move (startSquare, targetSquare, Move.Flag.EN_PASSANT));
+                            moves.add(new Move (startSquare, targetSquare, Move.Flag.EN_PASSANT, 888));
+                        }
+                    }
                 }
             }
         }
     }
 
-    boolean inCheckAfterEnPassant(int from, int to){
-        boolean whiteToMove = board.whiteToMove, isChecked = false;
-        board.squares[to] = Pieces.Pawn | (whiteToMove ? Pieces.White : Pieces.Black);
-        board.squares[from] = Pieces.None;
-        int enemyPawnIndex = to + (whiteToMove ? -8 : 8);
-        board.squares[enemyPawnIndex] = Pieces.None;
+    boolean inCheckAfterEnPassant(int startSquare, int targetSquare){
+        int epCapturedPawnSquare = targetSquare + (board.whiteToMove ? -8 : 8);
 
-        int direction = (from % 8) < (to % 8) ? 3 : 2;
+        // Update board to reflect en-passant capture
+        board.squares[targetSquare] = board.squares[startSquare];
+        board.squares[startSquare] = Pieces.None;
+        board.squares[epCapturedPawnSquare] = Pieces.None;
 
-        for(int n = 0; n < PrecomputedData.distanceToEdge[kingSquare][direction]; n++){
-            int targetSquare = kingSquare + (n + 1) * PrecomputedData.moveDirOffset[direction];
-            int currPiece = board.squares[targetSquare];
+        boolean inCheckAfterEpCapture = false;
+        if (SquareAttackedAfterEPCapture (epCapturedPawnSquare, startSquare)) {
+            inCheckAfterEpCapture = true;
+        }
 
-            if(!Pieces.isNone(currPiece)){
-                // found a friendly piece
-                if(Pieces.isSameColor(board.colorToMove, currPiece)) break;
+        // Undo change to board
+        board.squares[targetSquare] = Pieces.None;
+        board.squares[startSquare] = Pieces.Pawn | board.colorToMove;
+        board.squares[epCapturedPawnSquare] = Pieces.Pawn | board.opponentColor;
 
-                // only pinned if it is a rook or queen
-                if(Pieces.isRookOrQueen(currPiece)){
-                    isChecked = true;
+        return inCheckAfterEpCapture;
+    }
+    boolean SquareAttackedAfterEPCapture (int epCaptureSquare, int capturingPawnStartSquare) {
+        if (BoardUtility.overlapingSquares(attackMaskNoPawns, kingSquare)) {
+            return true;
+        }
+
+        // Loop through the horizontal direction towards ep capture to see if any enemy piece now attacks king
+        int dirIndex = (epCaptureSquare < kingSquare) ? 2 : 3;
+        for (int i = 0; i < PrecomputedData.distanceToEdge[kingSquare][dirIndex]; i++) {
+            int squareIndex = kingSquare + PrecomputedData.moveDirOffset[dirIndex] * (i + 1);
+            int piece = board.squares[squareIndex];
+            if (piece != Pieces.None) {
+                // Friendly piece is blocking view of this square from the enemy.
+                if (Pieces.isSameColor(board.colorToMove, piece)) {
+                    break;
                 }
-                else break;
+
+                // This square contains an enemy piece
+                else {
+                    if (Pieces.isRookOrQueen(piece)) {
+                        return true;
+                    } else {
+                        // This piece is not able to move in the current direction, and is therefore blocking any checks along this line
+                        break;
+                    }
+                }
             }
         }
 
-        int enemyPawn = Pieces.Pawn | (whiteToMove ? Pieces.Black : Pieces.White);
-        if(whiteToMove){
-            if(PrecomputedData.distanceToEdge[kingSquare][4] > 0){
-                int targetSquare = kingSquare + 7;
-                if(board.squares[targetSquare] == enemyPawn) isChecked = true;
-            }
-
-            if(PrecomputedData.distanceToEdge[kingSquare][6] > 0){
-                int targetSquare = kingSquare + 9;
-                if(board.squares[targetSquare] == enemyPawn) isChecked = true;
-            }
-        }else{
-            if(PrecomputedData.distanceToEdge[kingSquare][5] > 0){
-                int targetSquare = kingSquare - 7;
-                if(board.squares[targetSquare] == enemyPawn) isChecked = true;
-            }
-
-            if(PrecomputedData.distanceToEdge[kingSquare][7] > 0){
-                int targetSquare = kingSquare - 9;
-                if(board.squares[targetSquare] == enemyPawn) isChecked = true;
+        // check if enemy pawn is controlling this square (can't use pawn attack bitboard, because pawn has been captured)
+        for (int i = 0; i < 2; i++) {
+            // Check if square exists diagonal to friendly king from which enemy pawn could be attacking it
+            if (PrecomputedData.distanceToEdge[kingSquare][PrecomputedData.pawnAttackDir[board.colorToMoveIndex][i]] > 0) {
+                // move in direction friendly pawns attack to get square from which enemy pawn would attack
+                int piece = board.squares[kingSquare + PrecomputedData.moveDirOffset[PrecomputedData.pawnAttackDir[board.colorToMoveIndex][i]]];
+                if (piece == (Pieces.Pawn | board.opponentColor)) // is enemy pawn
+                {
+                    return true;
+                }
             }
         }
 
-        board.squares[from] = Pieces.Pawn | (whiteToMove ? Pieces.White : Pieces.Black);
-        board.squares[to] = Pieces.None;
-        board.squares[enemyPawnIndex] = enemyPawn;
-
-        return isChecked;
+        return false;
     }
 
     void GeneratePromotionMoves(int from, int to){
@@ -307,11 +355,11 @@ public class Generator {
     }
 
     boolean isPinned(int square){
-        return ((pinRayMask >> square) & 1) != 0;
+        return pinsExist && ((pinRayMask >> square) & 1) != 0;
     }
 
     boolean isIntersectingCheck(int square){
-        return ((checkRayMask >> square) & 1) != 0;
+        return inCheck && ((checkRayMask >> square) & 1) != 0;
     }
 
     // I do not understand this
@@ -326,7 +374,7 @@ public class Generator {
         knightAttackMask = 0;
         pawnAttackMask = 0;
         checkRayMask = pinRayMask = 0;
-        inCheck = inDoubleCheck = isPinned = false;
+        inCheck = inDoubleCheck = pinsExist = false;
         opponentColorIndex = 1 - currentColorIndex;
 
         // generate attack mask for sliding pieces
@@ -363,7 +411,7 @@ public class Generator {
                     if((isDiagonal && Pieces.isBishopOrQueen(currPiece)) || (!isDiagonal && Pieces.isRookOrQueen(currPiece))){
                         if(isFriendlyPieceBlocking){
                             // found a piece that is pinned
-                            isPinned = true;
+                            pinsExist = true;
                             pinRayMask |= rayMask;
                             break;
                         } else {
@@ -387,11 +435,11 @@ public class Generator {
         // attack and check mask for knights
         PieceList knights = board.knights[opponentColorIndex];
         boolean knightChecks = false;
+        long currentKnightMask = 0;
         for(int i=0; i<knights.count; i++){
             startSquare = knights.occupiedSquares[i];
 
-            long currentKnightMask = PrecomputedData.knightAttackMask[startSquare];
-            knightAttackMask |= currentKnightMask;
+            currentKnightMask |= PrecomputedData.knightAttackMask[startSquare];
 
             if(!knightChecks && BoardUtility.overlapingSquares(currentKnightMask, kingSquare)){
                 inDoubleCheck = inCheck;
@@ -400,15 +448,16 @@ public class Generator {
                 checkRayMask |= 1L << startSquare;
             }
         }
+        knightAttackMask |= currentKnightMask;
 
         // attack and check mask for pawns
         PieceList pawns = board.pawns[opponentColorIndex];
         boolean pawnChecks = false;
+        long currentPawnMask = 0;
         for(int i=0; i< pawns.count; i++){
             startSquare = pawns.occupiedSquares[i];
 
-            long currentPawnMask = PrecomputedData.pawnAttackMask[startSquare][opponentColorIndex];
-            pawnAttackMask |= currentPawnMask;
+            currentPawnMask |= PrecomputedData.pawnAttackMask[startSquare][opponentColorIndex];
 
             if(!pawnChecks && BoardUtility.overlapingSquares(currentPawnMask, kingSquare)){
                 inDoubleCheck = inCheck;
@@ -417,6 +466,7 @@ public class Generator {
                 checkRayMask |= 1L << startSquare;
             }
         }
+        pawnAttackMask |= currentPawnMask;
 
         // king attack mask
         long kingAttackMask = PrecomputedData.kingAttackMask[board.kingIndex[opponentColorIndex]];

@@ -22,7 +22,11 @@ public class BoardUtility {
         return (str.charAt(1) - '0') - 1;
     }
 
-    static void displayPosition(int[] squares, long attackMask){
+    static void displayPosition(int[] squares, long attackMask, boolean onlyboard){
+        System.out.println();
+        System.out.println("-----------------------------------------");
+        System.out.println();
+
         for(int i=7; i>=0; i--){
             for(int j=0; j<8; j++){
                 System.out.printf("%4d", squares[i * 8 + j] );
@@ -33,6 +37,8 @@ public class BoardUtility {
         System.out.println();
         System.out.println("-----------------------------------------");
         System.out.println();
+
+        if(onlyboard) return;
 
         for(int i=7; i>=0; i--){
             for(int j=0; j<8; j++){

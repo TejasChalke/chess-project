@@ -1,29 +1,49 @@
 package com.example.chessengine.MyEngine;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Bot {
     Board board;
     Generator generator;
 
-    public Bot(){
+    public Bot() {
         this.board = new Board();
         this.generator = new Generator();
-        // board.LoadPosition("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -");
+        board.LoadPosition("r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10");
 
-        // check for white castling
-        // board.LoadPosition("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -");
+//        board.LoadPosition();
+        List<String> curr = null;
+        System.out.println(board.currentBoardState & 15);
+        for (int i = 1; i <= 5; i++) {
+            curr = new ArrayList<>();
+            System.out.println(i + " -> " + TestMoveGeneration(i, curr));
+            System.out.println("====================================");
+            System.out.println("====================================");
+        }
+    }
 
-        // check for knight moves under check
-        // original r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1
-        // board.LoadPosition("r3k2r/Pppp1ppp/1b3nbB/nP6/NBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1");
+    int TestMoveGeneration(int depth, List<String> curr){
+        if(depth == 0) return 1;
+        List<Move> moves = generator.GenerateMoves(board);
 
-        // check for en passant checks
-        // original 8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -
-        // board.LoadPosition("8/8/3p4/KPp4r/1R3p1k/8/4P1P1/8 w - c6");
+        int cnt = 0;
 
-        board.LoadPosition();
-        generator.GenerateMoves(board);
+        for(Move m: moves){
+//            curr.add(board.colorToMoveIndex + ", " + Integer.toString(m.from) + " | " + board.squares[m.from] + " | " + " -> " + Integer.toString(m.to) + " -> ");
+            if(board.squares[m.from] == Pieces.None) {
+                for(Move m1: moves) System.out.println(m1.from + " -> " + m1.to + " : " + m1.piece);
+//                System.out.println(curr);
+//                curr.remove(curr.size() - 1);
+                continue;
+            }
+
+            board.MakeMove(m);
+            cnt += TestMoveGeneration(depth - 1, curr);
+            board.UnmakeMove(m);
+        }
+
+        return cnt;
     }
 
     public Move FindBestMove(){

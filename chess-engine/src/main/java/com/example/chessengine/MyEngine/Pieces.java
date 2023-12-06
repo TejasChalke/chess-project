@@ -52,10 +52,24 @@ public class Pieces {
     }
 
     static boolean isBishopOrQueen(int piece){
-        return (piece & 7) == Pieces.Bishop || (piece & 7) == Pieces.Queen;
+        return ((piece & 7) == Pieces.Bishop) || ((piece & 7) == Pieces.Queen);
     }
 
     static boolean isRookOrQueen(int piece){
-        return (piece & 7) == Pieces.Rook || (piece & 7) == Pieces.Queen;
+        return ((piece & 7) == Pieces.Rook) || ((piece & 7) == Pieces.Queen);
+    }
+
+    static int getPiece(Move.Flag flag){
+        return switch (flag){
+            case PROMOTE_TO_QUEEN -> Queen;
+            case PROMOTE_TO_ROOK -> Rook;
+            case PROMOTE_TO_KNIGHT -> Knight;
+            case PROMOTE_TO_BISHOP -> Bishop;
+            default -> None;
+        };
+    }
+
+    static int PieceType(int piece){
+        return piece & 7;
     }
 }
