@@ -8,7 +8,7 @@ public class Board {
     final int removeWhiteQueenSideMask = 0b1111111111111101;
     final int removeBlackKingSideMask = 0b1111111111111011;
     final int removeBlackQueenSideMask = 0b1111111111110111;
-    int[] squares;
+    public int[] squares;
     // first four bits 0-3 for castle state
     // next four bits 4-7 for enpassant file
     // next five bits 8-12 for captured piece

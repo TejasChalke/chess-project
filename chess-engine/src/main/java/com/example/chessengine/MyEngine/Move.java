@@ -1,7 +1,7 @@
 package com.example.chessengine.MyEngine;
 
 public class Move {
-    static enum Flag {
+    public static enum Flag {
         EN_PASSANT,
         CASTLE_KING_SIDE,
         CASTLE_QUEEN_SIDE,
@@ -20,32 +20,48 @@ public class Move {
         };
     }
 
-    int from, to, piece;
+    int from, to;
     Flag currentFlag;
 
-    Move(int from, int to){
-        this.from = from;
-        this.to = to;
-        this.currentFlag = Flag.NONE;
-        this.piece = 0;
-    }
-    Move(int from, int to, int piece){
-        this.from = from;
-        this.to = to;
-        this.currentFlag = Flag.NONE;
-        this.piece = piece;
-    }
-    Move(int from, int to, Flag f){
-        this.from = from;
-        this.to = to;
-        this.currentFlag = f;
-        this.piece = 0;
+    public Move(){
+        this.from = -1;
+        this.to = -1;
+        currentFlag = Flag.NONE;
     }
 
-    Move(int from, int to, Flag f, int piece){
+    public int getFrom() {
+        return from;
+    }
+
+    public void setFrom(int from) {
+        this.from = from;
+    }
+
+    public int getTo() {
+        return to;
+    }
+
+    public void setTo(int to) {
+        this.to = to;
+    }
+
+    public Flag getCurrentFlag() {
+        return currentFlag;
+    }
+
+    public void setCurrentFlag(Flag currentFlag) {
+        this.currentFlag = currentFlag;
+    }
+
+    public Move(int from, int to){
+        this.from = from;
+        this.to = to;
+        this.currentFlag = Flag.NONE;
+    }
+
+    public Move(int from, int to, Flag f){
         this.from = from;
         this.to = to;
         this.currentFlag = f;
-        this.piece = piece;
     }
 }

@@ -1,127 +1,119 @@
-.boardConatiner{
-    background-color: rgb(49, 49, 49);
-    position: relative;
+#mainContainer{
+    display: grid;
     height: 100vh;
-    width: 100vw;
-    overflow: hidden;
+    grid-template-columns: 35% 1fr;
+    background-color: rgb(52, 52, 52);
 
-    .options{
-        position: absolute;
-        top: 50%;
-        left: 20%;
-        transform: translate(-50%, -80%);
-        
-        aspect-ratio: 1/1;
-        height: 240px;
-        border-radius: 10px;
-        padding: 1rem;
-        
+    #settings{
         display: flex;
         flex-direction: column;
+        justify-content: space-evenly;
+        align-items: center;
+
+        #pawnPromotion{
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+
+            #promotionTitle{
+                font-size: 1.5rem;
+                font-weight: 500;
+                color: white;
+            }
+        }
+
+        #options{            
+            aspect-ratio: 1/1;
+            height: 240px;
+            border-radius: 10px;
+            padding: 1rem;
+            
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            background: rgb(28, 28, 28);
+    
+            ol{
+                margin-bottom: .5rem;
+            }
+    
+            input{
+                margin-bottom: .5rem;
+                padding: .5rem;
+            }
+    
+            .buttons{
+                display: flex;
+                justify-content: space-evenly;
+                align-items: center;
+                width: 100%;
+    
+                .btn{
+                    cursor: pointer;
+                    border: 1px solid white;
+                    padding: .25rem 1rem;
+                }
+            }
+    
+        }
+    }
+
+    #boardContainer{
+        display: flex;
         justify-content: center;
         align-items: center;
-        color: white;
-        background: rgb(28, 28, 28);
-
-        ol{
-            margin-bottom: .5rem;
-        }
-
-        input{
-            margin-bottom: .5rem;
-            padding: .5rem;
-        }
-
-        .buttons{
-            display: flex;
-            justify-content: space-evenly;
-            align-items: center;
-            width: 100%;
-
-            .btn{
-                cursor: pointer;
-                border: 1px solid white;
-                padding: .25rem 1rem;
-            }
-        }
-
-    }
-    
-    .ui2{
-        position: absolute;
-        top: 50%;
-        left: 20%;
-        transform: translate(-50%, 30%);
         
-        aspect-ratio: 1/1;
-        height: 240px;
-        background: yellow;
-    }
-
-    #pawnPromotion{
-        position: relative;
-        top: 1rem;
-        left: 1rem;
-
-        .images{
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: fit-content;
-
-            img{
-                width: 80px;
-                aspect-ratio: 1/1;
-            }
-        }
-    }
-
-    .board{
-        position: absolute;
-        top: 50%;
-        left: 70%;
-        transform: rotateZ(0deg) translate(-50%, -50%);
-        
-        aspect-ratio: 1/1;
-        height: 640px;
-        
-        &.rotate{
-            transform: rotateZ(180deg) translate(50%, 50%);
-        }
-    
-        .square{
-            position: absolute;
+        #board{
+            position: relative;
+            height: 640px;
             aspect-ratio: 1/1;
-            height: calc(100% / 8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transform: rotateZ(0deg);
+        
+            .square{
+                position: absolute;
+                height: 80px;
+                aspect-ratio: 1/1;
+                cursor: pointer;
+
+                .label{
+                    position: absolute;
+
+                    &.top-left{
+                        top: 2px;
+                        left: 4px;
+                    }
+
+                    &.bottom-right{
+                        bottom: 2px;
+                        right: 8px;
+                    }
+                }
+
+                .moveCircle, img{
+                    position: absolute;
+                    left: 50%;
+                    top: 50%;
+                    transform: translate(-50%, -50%);
+                }
+
+                .moveCircle{
+                    height: 25%;
+                    aspect-ratio: 1/1;
+                    border-radius: 50%;
+                    background-color: rgba(0, 0, 0, 0.75);
+                }
+            }
 
             &.rotate{
                 transform: rotateZ(180deg);
-            }
 
-            .label{
-                font-size: 1.5rem;
-                color: white;
-            }
-
-            img{
-                width: 80%;
-                aspect-ratio: 1/1;
-            }
-
-            .moveCircle{
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                border-radius: 50%;
-                width: 30%;
-                aspect-ratio: 1/1;
-                background-color: rgba(0, 0, 0, 0.75);
+                .square{
+                    .label{
+                        transform: rotateZ(180deg);
+                    }
+                }
             }
         }
     }

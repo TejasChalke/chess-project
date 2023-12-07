@@ -52,8 +52,7 @@ public class Generator {
 
             // Safe for king to move to this square
             if (!isSquareAttacked(targetSquare)) {
-//                moves.add(new Move (kingSquare, targetSquare));
-                moves.add(new Move (kingSquare, targetSquare, 999));
+                moves.add(new Move (kingSquare, targetSquare));
 
                 // Castling:
                 if (!inCheck && !isCapture) {
@@ -62,8 +61,7 @@ public class Generator {
                         int castleKingsideSquare = targetSquare + 1;
                         if (board.squares[castleKingsideSquare] == Pieces.None) {
                             if (!isSquareAttacked(castleKingsideSquare)) {
-//                                moves.add(new Move (kingSquare, castleKingsideSquare, Move.Flag.CASTLE_KING_SIDE));
-                                moves.add(new Move (kingSquare, castleKingsideSquare, Move.Flag.CASTLE_KING_SIDE, 999));
+                                moves.add(new Move (kingSquare, castleKingsideSquare, Move.Flag.CASTLE_KING_SIDE));
                             }
                         }
                     }
@@ -72,7 +70,7 @@ public class Generator {
                         int castleQueensideSquare = targetSquare - 1;
                         if (board.squares[castleQueensideSquare] == Pieces.None && board.squares[castleQueensideSquare - 1] == Pieces.None) {
                             if (!isSquareAttacked(castleQueensideSquare)) {
-                                moves.add(new Move(kingSquare, castleQueensideSquare, Move.Flag.CASTLE_QUEEN_SIDE, 999));
+                                moves.add(new Move(kingSquare, castleQueensideSquare, Move.Flag.CASTLE_QUEEN_SIDE));
                             }
                         }
                     }
@@ -85,38 +83,21 @@ public class Generator {
 
         PieceList queens = board.queens[currentColorIndex];
         for(int i=0; i<queens.count; i++){
-//            if(queens.occupiedSquares[i] == -1){
-//                System.out.println("Gotcha Q");
-//                continue;
-//            }
             GenerateSlidingPieceMoves(queens.occupiedSquares[i], 0, 8);
         }
 
         PieceList bishops = board.bishops[currentColorIndex];
         for(int i=0; i<bishops.count; i++){
-//            if(bishops.occupiedSquares[i] == -1){
-//                System.out.println("Gotcha B");
-//                continue;
-//            }
             GenerateSlidingPieceMoves(bishops.occupiedSquares[i], 4, 8);
         }
 
         PieceList rooks = board.rooks[currentColorIndex];
         for(int i=0; i<rooks.count; i++){
-//            if(rooks.occupiedSquares[i] == -1){
-//                System.out.println("Gotcha R");
-//                continue;
-//            }
             GenerateSlidingPieceMoves(rooks.occupiedSquares[i], 0, 4);
         }
     }
 
     void GenerateSlidingPieceMoves(int startSquare, int startIndex, int endIndex){
-        int temp;
-        if(startIndex == 0 && endIndex == 8) temp = 777;
-        else if(startIndex == 0) temp = 444;
-        else temp = 111;
-
         boolean isPinned = isPinned(startSquare);
 
         // If this piece is pinned, and the king is in check, this piece cannot move
@@ -144,8 +125,7 @@ public class Generator {
 
                 boolean movePreventsCheck = isIntersectingCheck(targetSquare);
                 if (movePreventsCheck || !inCheck) {
-//                    moves.add(new Move (startSquare, targetSquare));
-                    moves.add(new Move (startSquare, targetSquare, temp));
+                    moves.add(new Move (startSquare, targetSquare));
                 }
 
                 // If square not empty, can't move any further in this direction
@@ -162,11 +142,6 @@ public class Generator {
 
         for (int i = 0; i < myKnights.count; i++) {
             int startSquare = myKnights.occupiedSquares[i];
-//            if(startSquare == -1){
-//                System.out.println("Gotcha N");
-//                continue;
-//            }
-
             // Knight cannot move if it is pinned
             if (isPinned(startSquare)) {
                 continue;
@@ -181,8 +156,7 @@ public class Generator {
                     continue;
                 }
 
-//                moves.add(new Move (startSquare, targetSquare));
-                moves.add(new Move (startSquare, targetSquare, 333));
+                moves.add(new Move (startSquare, targetSquare));
             }
         }
     }
@@ -202,11 +176,6 @@ public class Generator {
 
         for (int i = 0; i < myPawns.count; i++) {
             int startSquare = myPawns.occupiedSquares[i];
-//            if(startSquare == -1){
-//                System.out.println("Gotcha P");
-//                continue;
-//            }
-
             int rank = startSquare / 8;
             boolean oneStepFromPromotion = rank == finalRankBeforePromotion;
 
@@ -221,8 +190,7 @@ public class Generator {
                         if (oneStepFromPromotion) {
                             GeneratePromotionMoves(startSquare, squareOneForward);
                         } else {
-//                            moves.add(new Move (startSquare, squareOneForward));
-                            moves.add(new Move (startSquare, squareOneForward, 888));
+                            moves.add(new Move (startSquare, squareOneForward));
                         }
                     }
 
@@ -232,8 +200,7 @@ public class Generator {
                         if (board.squares[squareTwoForward] == Pieces.None) {
                             // Not in check, or pawn is interposing checking piece
                             if (!inCheck || isIntersectingCheck(squareTwoForward)) {
-//                                moves.add(new Move (startSquare, squareTwoForward, Move.Flag.PAWN_TWO_SQUARES_FORWARD));
-                                moves.add(new Move (startSquare, squareTwoForward, Move.Flag.PAWN_TWO_SQUARES_FORWARD, 878));
+                                moves.add(new Move (startSquare, squareTwoForward, Move.Flag.PAWN_TWO_SQUARES_FORWARD));
                             }
                         }
                     }
@@ -262,16 +229,14 @@ public class Generator {
                         if (oneStepFromPromotion) {
                             GeneratePromotionMoves(startSquare, targetSquare);
                         } else {
-//                            moves.add(new Move (startSquare, targetSquare));
-                            moves.add(new Move (startSquare, targetSquare, 887));
+                            moves.add(new Move (startSquare, targetSquare));
                         }
                     }
 
                     // Capture en-passant
                     if (targetSquare == enPassantSquare) {
                         if (!inCheckAfterEnPassant(startSquare, targetSquare)) {
-//                            moves.add(new Move (startSquare, targetSquare, Move.Flag.EN_PASSANT));
-                            moves.add(new Move (startSquare, targetSquare, Move.Flag.EN_PASSANT, 888));
+                            moves.add(new Move (startSquare, targetSquare, Move.Flag.EN_PASSANT));
                         }
                     }
                 }

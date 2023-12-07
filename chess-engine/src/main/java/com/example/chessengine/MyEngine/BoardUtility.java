@@ -22,7 +22,7 @@ public class BoardUtility {
         return (str.charAt(1) - '0') - 1;
     }
 
-    static void displayPosition(int[] squares, long attackMask, boolean onlyboard){
+    public static void displayPosition(int[] squares, long attackMask, boolean onlyboard){
         System.out.println();
         System.out.println("-----------------------------------------");
         System.out.println();
