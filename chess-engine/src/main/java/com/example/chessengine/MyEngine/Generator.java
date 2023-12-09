@@ -7,7 +7,7 @@ public class Generator {
     List<Move> moves;
     Board board;
     long attackMask, attackMaskNoPawns, slidingAttackMask, knightAttackMask, pawnAttackMask, checkRayMask, pinRayMask;
-    boolean inCheck, inDoubleCheck, pinsExist;
+    public boolean inCheck, inDoubleCheck, pinsExist, genQuiets;
     int currentColorIndex, opponentColorIndex, kingSquare;
 
     public List<Move> GenerateMoves(Board board){
@@ -15,6 +15,26 @@ public class Generator {
         this.board = board;
         currentColorIndex = board.colorToMoveIndex;
         kingSquare = board.kingIndex[currentColorIndex];
+        genQuiets = true;
+
+        GenerateAttackMask();
+        GenerateKingMoves();
+
+        if(inDoubleCheck) return moves;
+
+        GenerateSlidingMoves();
+        GenerateKnightMoves();
+        GeneratePawnMoves();
+
+        return moves;
+    }
+
+    public List<Move> GenerateMoves(Board board, boolean attacksOnly){
+        moves = new ArrayList<>();
+        this.board = board;
+        currentColorIndex = board.colorToMoveIndex;
+        kingSquare = board.kingIndex[currentColorIndex];
+        genQuiets = attacksOnly;
 
         GenerateAttackMask();
         GenerateKingMoves();
@@ -45,7 +65,7 @@ public class Generator {
             if (!isCapture) {
                 // King can't move to square marked as under enemy control, unless he is capturing that piece
                 // Also skip if not generating quiet moves
-                if (isIntersectingCheck(targetSquare)) {
+                if (!genQuiets || isIntersectingCheck(targetSquare)) {
                     continue;
                 }
             }
@@ -121,11 +141,11 @@ public class Generator {
                 if (Pieces.isSameColor(board.colorToMove, targetSquarePiece)) {
                     break;
                 }
-                boolean isCapture = targetSquarePiece != Pieces.None;
+                boolean isCapture = !Pieces.isNone(targetSquarePiece);
 
                 boolean movePreventsCheck = isIntersectingCheck(targetSquare);
                 if (movePreventsCheck || !inCheck) {
-                    moves.add(new Move (startSquare, targetSquare));
+                    if(genQuiets || isCapture) moves.add(new Move (startSquare, targetSquare));
                 }
 
                 // If square not empty, can't move any further in this direction
@@ -151,12 +171,15 @@ public class Generator {
                 int targetSquare = PrecomputedData.knightAttackSquares[startSquare][knightMoveIndex];
                 int targetSquarePiece = board.squares[targetSquare];
                 boolean isCapture = Pieces.isSameColor(board.opponentColor, targetSquarePiece);
-                // Skip if square contains friendly piece, or if in check and knight is not interposing/capturing checking piece
-                if (Pieces.isSameColor(board.colorToMove, targetSquarePiece) || (inCheck && !isIntersectingCheck(targetSquare))) {
-                    continue;
-                }
 
-                moves.add(new Move (startSquare, targetSquare));
+                if(genQuiets || isCapture){
+                    // Skip if square contains friendly piece, or if in check and knight is not interposing/capturing checking piece
+                    if (Pieces.isSameColor(board.colorToMove, targetSquarePiece) || (inCheck && !isIntersectingCheck(targetSquare))) {
+                        continue;
+                    }
+
+                    moves.add(new Move (startSquare, targetSquare));
+                }
             }
         }
     }
@@ -179,28 +202,30 @@ public class Generator {
             int rank = startSquare / 8;
             boolean oneStepFromPromotion = rank == finalRankBeforePromotion;
 
-            int squareOneForward = startSquare + pawnOffset;
+            if(genQuiets){
+                int squareOneForward = startSquare + pawnOffset;
 
-            // Square ahead of pawn is empty: forward moves
-            if (board.squares[squareOneForward] == Pieces.None) {
-                // Pawn not pinned, or is moving along line of pin
-                if (!isPinned(startSquare) || isMovingAlongRay(pawnOffset, startSquare, board.kingIndex[board.colorToMoveIndex])) {
-                    // Not in check, or pawn is interposing checking piece
-                    if (!inCheck || isIntersectingCheck(squareOneForward)) {
-                        if (oneStepFromPromotion) {
-                            GeneratePromotionMoves(startSquare, squareOneForward);
-                        } else {
-                            moves.add(new Move (startSquare, squareOneForward));
+                // Square ahead of pawn is empty: forward moves
+                if (board.squares[squareOneForward] == Pieces.None) {
+                    // Pawn not pinned, or is moving along line of pin
+                    if (!isPinned(startSquare) || isMovingAlongRay(pawnOffset, startSquare, board.kingIndex[board.colorToMoveIndex])) {
+                        // Not in check, or pawn is interposing checking piece
+                        if (!inCheck || isIntersectingCheck(squareOneForward)) {
+                            if (oneStepFromPromotion) {
+                                GeneratePromotionMoves(startSquare, squareOneForward);
+                            } else {
+                                moves.add(new Move (startSquare, squareOneForward));
+                            }
                         }
-                    }
 
-                    // Is on starting square (so can move two forward if not blocked)
-                    if (rank == startRank) {
-                        int squareTwoForward = squareOneForward + pawnOffset;
-                        if (board.squares[squareTwoForward] == Pieces.None) {
-                            // Not in check, or pawn is interposing checking piece
-                            if (!inCheck || isIntersectingCheck(squareTwoForward)) {
-                                moves.add(new Move (startSquare, squareTwoForward, Move.Flag.PAWN_TWO_SQUARES_FORWARD));
+                        // Is on starting square (so can move two forward if not blocked)
+                        if (rank == startRank) {
+                            int squareTwoForward = squareOneForward + pawnOffset;
+                            if (board.squares[squareTwoForward] == Pieces.None) {
+                                // Not in check, or pawn is interposing checking piece
+                                if (!inCheck || isIntersectingCheck(squareTwoForward)) {
+                                    moves.add(new Move (startSquare, squareTwoForward, Move.Flag.PAWN_TWO_SQUARES_FORWARD));
+                                }
                             }
                         }
                     }

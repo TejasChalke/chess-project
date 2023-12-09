@@ -62,6 +62,17 @@ public class EngineServer {
     @CrossOrigin("*")
     @GetMapping("/getlegalmoves")
     List<Move> getLegalMoves(){
-        return this.bot.GenerateLegalMoves();
+        List<Move> moves = this.bot.GenerateLegalMoves();
+        if(moves.isEmpty()){
+            if(this.bot.generator.inCheck){
+                // checkmate
+                moves.add(new Move(-1, -1));
+            }else{
+                // stalemate
+                moves.add(new Move(-2, -2));
+            }
+        }
+
+        return moves;
     }
 }

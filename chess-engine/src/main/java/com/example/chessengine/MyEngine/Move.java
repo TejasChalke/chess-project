@@ -13,6 +13,8 @@ public class Move {
         NONE
     };
 
+    public static Move invalidMove = new Move(-1, -1, Flag.NONE);
+
     static boolean isPromotion(Flag flag){
         return switch (flag) {
             case PROMOTE_TO_BISHOP, PROMOTE_TO_KNIGHT, PROMOTE_TO_ROOK, PROMOTE_TO_QUEEN -> true;

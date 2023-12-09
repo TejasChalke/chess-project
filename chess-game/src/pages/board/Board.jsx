@@ -57,6 +57,17 @@ export default function Board(){
             }
     
             const currentLegalMove = await response.json();
+            if(currentLegalMove.from < 0){
+                if(currentLegalMove.from === -1){
+                    // -1 for checkmate
+                    console.log("checkmate");
+                }else{
+                    // -2 for stalemate
+                    console.log("stalemate");
+                }
+
+                return;
+            }
             console.log("Bot move: ", currentLegalMove);
 
             const from = currentLegalMove.from, to = currentLegalMove.to, currentFLag = currentLegalMove.currentFlag;
@@ -141,11 +152,13 @@ export default function Board(){
             setSquares(temp);
             setBoardState(defaultBoardState);
             setSettings(currSettings);
+            setMovesSet(false);
             return;
         }
 
         let file = 0, rank = 7;
         const pieces = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".split(' ')[0];
+        // const pieces = "k/8/8/8/8/8/1Q5/K6 w - - 0 1".split(' ')[0];
         const text = "rnbqkbnrpRNBQKBNRP", numbers = "0123456789";
 
         pieces.split('').forEach(curr => {
@@ -169,6 +182,7 @@ export default function Board(){
         setSquares(temp);
         setBoardState(nextBoardState);
         setSettings(currSettings);
+        setMovesSet(false);
     }
 
     function changePawnToPromote(color, piece){
@@ -191,9 +205,11 @@ export default function Board(){
 
         if(isNaN(type) || type < 0 || type > 3) return;
         
-        let temp = {...settings};
+        let temp = {
+            gameType: -1,
+            rotateBoard: false
+        };
         temp.gameType = parseInt(type);
-
 
         const response = await fetch("http://localhost:8080/setboard");
 
@@ -204,9 +220,9 @@ export default function Board(){
         
         console.log("Board set on the server!");
 
-        if(temp === 1){
+        if(temp.gameType === 1){
             temp.rotateBoard = false;
-        }else if(temp === 2){
+        }else if(temp.gameType === 2){
             temp.rotateBoard = true;
         }
         
@@ -220,9 +236,12 @@ export default function Board(){
         if(boardState.from === -1){
             if(Pieces.isNone(targetPiece) || (boardState.whiteToMove && Pieces.isBlack(targetPiece)) || (!boardState.whiteToMove && Pieces.isWhite(targetPiece))) return;
 
+            if(legalMoves[index].length === 0) return;
             showLegalMoves(index);
         }else{
             if((boardState.whiteToMove && Pieces.isWhite(targetPiece)) || (!boardState.whiteToMove && Pieces.isBlack(targetPiece))){
+                if(legalMoves[index].length === 0) return;
+
                 showLegalMoves(index);
                 return;
             }
@@ -338,17 +357,25 @@ export default function Board(){
             temp[i] = [];
         }
 
-        for(let i=0; i<res.length; i++){
-            let index = res[i].from;
-            temp[index].push(res[i]);
+        if(res.length === 1 && res[0].from < 0){
+            if(res[0].from === -1){
+                console.log("Player lost Checkmate!");
+            } else {
+                console.log("Draw by stalemate");
+            }
+        } else {
+            for(let i=0; i<res.length; i++){
+                let index = res[i].from;
+                temp[index].push(res[i]);
+            }
         }
 
-
+        
         setLegalMoves(temp);
         setMovesSet(true);
     }
 
-    if(settings.gameType !== -1 && !movesSet){
+    if(settings.gameType !== -1 && !boardState.botTurn && !movesSet){
         getLegalMoves();
     }
 
