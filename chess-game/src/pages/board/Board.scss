@@ -110,8 +110,12 @@
                 transform: rotateZ(180deg);
 
                 .square{
-                    .label{
+                    .label {
                         transform: rotateZ(180deg);
+                    }
+
+                    img {
+                        transform: translate(-50%, -50%) rotateZ(180deg);
                     }
                 }
             }

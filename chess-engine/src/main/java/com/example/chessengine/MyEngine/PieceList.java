@@ -6,7 +6,7 @@ import java.util.Arrays;
 public class PieceList {
     int[] map;
     int[] occupiedSquares;
-    int count;
+    public int count;
 
     PieceList(){
         count = 0;

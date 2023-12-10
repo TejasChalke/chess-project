@@ -1,4 +1,7 @@
-package com.example.chessengine.MyEngine;
+package com.example.chessengine.MyEngine.AI;
+
+import com.example.chessengine.MyEngine.Board;
+import com.example.chessengine.MyEngine.Pieces;
 
 public class Evaluator {
 
@@ -8,6 +11,17 @@ public class Evaluator {
     public final int bishopValue = 320;
     public final int rookValue = 500;
     public final int queenValue = 900;
+
+    public static int GetPieceValue(int piece){
+        return switch (piece & 7){
+            case Pieces.Queen -> 900;
+            case Pieces.Rook -> 500;
+            case Pieces.Bishop -> 320;
+            case Pieces.Knight -> 300;
+            default -> 100;
+        };
+    }
+
     public int Evaluate(Board board){
         this.board = board;
         int whiteEval = 0;
@@ -21,8 +35,9 @@ public class Evaluator {
 //        float whiteEndgamePhaseWeight = EndgamePhaseWeight (whiteMaterialWithoutPawns);
 //        float blackEndgamePhaseWeight = EndgamePhaseWeight (blackMaterialWithoutPawns);
 
-        whiteEval += whiteMaterial;
-        blackEval += blackMaterial;
+        int[] squareValues = OccupiedSquaresValue();
+        whiteEval += whiteMaterial + squareValues[0];
+        blackEval += blackMaterial + squareValues[1];
 //        whiteEval += MopUpEval (Board.whiteIndex, Board.blackIndex, whiteMaterial, blackMaterial, blackEndgamePhaseWeight);
 //        blackEval += MopUpEval (Board.blackIndex, Board.whiteIndex, blackMaterial, whiteMaterial, whiteEndgamePhaseWeight);
 
@@ -44,5 +59,19 @@ public class Evaluator {
         material += board.queens[colourIndex].count * queenValue;
 
         return material;
+    }
+
+    int[] OccupiedSquaresValue(){
+        int[] res = new int[2];
+
+        for(int i=0; i<64; i++){
+            int piece = board.squares[i];
+            if(!Pieces.isNone(piece)){
+                if(Pieces.isWhite(piece)) res[0] += PieceSquareTable.GetSquareValue(piece, 0, i, 0);
+                else res[1] += PieceSquareTable.GetSquareValue(piece, 1, i, 0);
+            }
+        }
+
+        return res;
     }
 }

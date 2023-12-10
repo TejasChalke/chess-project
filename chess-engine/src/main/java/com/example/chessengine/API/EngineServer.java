@@ -1,7 +1,6 @@
 package com.example.chessengine.API;
 
-import com.example.chessengine.MyEngine.BoardUtility;
-import com.example.chessengine.MyEngine.Bot;
+import com.example.chessengine.MyEngine.AI.Bot;
 import com.example.chessengine.MyEngine.Move;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

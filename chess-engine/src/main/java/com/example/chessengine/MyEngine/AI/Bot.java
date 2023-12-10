@@ -1,4 +1,10 @@
-package com.example.chessengine.MyEngine;
+package com.example.chessengine.MyEngine.AI;
+
+import com.example.chessengine.MyEngine.AI.Evaluator;
+import com.example.chessengine.MyEngine.Board;
+import com.example.chessengine.MyEngine.Generator;
+import com.example.chessengine.MyEngine.Move;
+import com.example.chessengine.MyEngine.Pieces;
 
 import java.util.List;
 
@@ -70,10 +76,11 @@ public class Bot {
 
     public int FindBestMove(int depth, int movesFromRoot, int alpha, int beta){
         if(depth == 0){
-            return evaluator.Evaluate(board);
+            return QuiescenceSearch(alpha, beta);
         }
 
         List<Move> moves = generator.GenerateMoves(board);
+
         if (moves.isEmpty()) {
             if (generator.inCheck) {
                 return -(infinity - movesFromRoot);
@@ -103,6 +110,39 @@ public class Bot {
                     currentBestMove = move;
                     currentBestEval = eval;
                 }
+            }
+        }
+
+        return alpha;
+    }
+
+    // Search capture moves until a 'quiet' position is reached.
+    int QuiescenceSearch (int alpha, int beta) {
+        // A player isn't forced to make a capture (typically), so see what the evaluation is without capturing anything.
+        // This prevents situations where a player ony has bad captures available from being evaluated as bad,
+        // when the player might have good non-capture moves available.
+        int eval = evaluator.Evaluate (board);
+
+        if (eval >= beta) {
+            return beta;
+        }
+        if (eval > alpha) {
+            alpha = eval;
+        }
+
+        var moves = generator.GenerateMoves (board, false);
+        generator.OrderMoves (moves);
+
+        for (Move move : moves) {
+            board.MakeMove(move);
+            eval = -QuiescenceSearch(-beta, -alpha);
+            board.UnmakeMove(move);
+
+            if (eval >= beta) {
+                return beta;
+            }
+            if (eval > alpha) {
+                alpha = eval;
             }
         }
 

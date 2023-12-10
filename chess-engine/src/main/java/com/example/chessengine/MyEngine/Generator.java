@@ -1,5 +1,7 @@
 package com.example.chessengine.MyEngine;
 
+import com.example.chessengine.MyEngine.AI.Evaluator;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,12 +31,12 @@ public class Generator {
         return moves;
     }
 
-    public List<Move> GenerateMoves(Board board, boolean attacksOnly){
+    public List<Move> GenerateMoves(Board board, boolean generateQuietMoves){
         moves = new ArrayList<>();
         this.board = board;
         currentColorIndex = board.colorToMoveIndex;
         kingSquare = board.kingIndex[currentColorIndex];
-        genQuiets = attacksOnly;
+        genQuiets = generateQuietMoves;
 
         GenerateAttackMask();
         GenerateKingMoves();
@@ -46,6 +48,45 @@ public class Generator {
         GeneratePawnMoves();
 
         return moves;
+    }
+
+    public void OrderMoves(List<Move> moves){
+        int[] value = new int[moves.size()];
+
+        // set the values
+        for(int i=0; i<moves.size(); i++){
+            Move curr = moves.get(i);
+            int piece = board.squares[curr.to];
+
+            if(!Pieces.isNone(piece)){
+                value[i] += 5 * Evaluator.GetPieceValue(piece) - Evaluator.GetPieceValue(board.squares[curr.from]);
+            }
+
+            if(Move.isPromotion(curr.currentFlag)){
+                value[i] += switch (curr.currentFlag){
+                    case PROMOTE_TO_QUEEN -> 900;
+                    case PROMOTE_TO_ROOK -> 500;
+                    case PROMOTE_TO_BISHOP -> 300;
+                    case PROMOTE_TO_KNIGHT -> 320;
+                    default -> 0;
+                };
+            }
+        }
+
+        // order the moves
+        for(int i=0; i<moves.size()-1; i++){
+            for(int j=1; j<moves.size()-i; j++){
+                if(value[j-1] < value[j]){
+                    int t = value[j-1];
+                    value[j-1] = value[j];
+                    value[j] = t;
+
+                    Move temp = moves.get(j-1);
+                    moves.set(j-1, moves.get(j));
+                    moves.set(j, temp);
+                }
+            }
+        }
     }
     
     void GenerateKingMoves(){

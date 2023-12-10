@@ -22,8 +22,8 @@ public class Move {
         };
     }
 
-    int from, to;
-    Flag currentFlag;
+    public int from, to;
+    public Flag currentFlag;
 
     public Move(){
         this.from = -1;

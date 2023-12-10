@@ -3,7 +3,7 @@ package com.example.chessengine.MyEngine;
 import java.util.Stack;
 
 public class Board {
-    static final int whiteIndex = 0, blackIndex = 1;
+    public static final int whiteIndex = 0, blackIndex = 1;
     final int removeWhiteKingSideMask = 0b1111111111111110;
     final int removeWhiteQueenSideMask = 0b1111111111111101;
     final int removeBlackKingSideMask = 0b1111111111111011;
@@ -15,10 +15,10 @@ public class Board {
     // remaining bits for counter
     int currentBoardState;
     Stack<Integer> boardStateHistory;
-    boolean whiteToMove;
+    public boolean whiteToMove;
     int colorToMove, opponentColor, colorToMoveIndex;
 
-    PieceList[] pawns, knights, bishops, rooks, queens;
+    public PieceList[] pawns, knights, bishops, rooks, queens;
     int[] kingIndex;
 
     public void MakeMove(Move move){
